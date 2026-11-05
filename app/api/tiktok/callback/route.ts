@@ -10,5 +10,5 @@ export async function GET(req: Request) {
   jar.delete("tt_state");
   try { await exchangeCode(q.get("code")!, u.id); }
   catch (e) { return new Response((e as Error).message, { status: 400 }); }
-  return Response.redirect(new URL("/coach?connecte=1", process.env.APP_URL ?? req.url));
+  return Response.redirect(new URL("/comptes", process.env.APP_URL ?? req.url));
 }

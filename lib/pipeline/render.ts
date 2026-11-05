@@ -42,7 +42,9 @@ export async function renderClip(o: {
   const assArg = assFile.replace(/\\/g, "/").replace(/:/g, "\\:").replace(/'/g, "\\'");
 
   let base: string;
-  if (o.cropMode === "wide" || o.srcW / o.srcH < 0.7) {
+  if (o.cropMode === "none") {
+    base = `[0:v]scale=1080:1920,setsar=1[v0]`; // source déjà au format 9:16 (vidéos IA)
+  } else if (o.cropMode === "wide" || o.srcW / o.srcH < 0.7) {
     // Plan large : vidéo entière au centre, fond flou animé (léger zoom lent).
     base = `[0:v]split[a][b];[a]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=30:2,eq=brightness=-0.08,` +
       `zoompan=z='min(1.0+on/3000,1.08)':d=1:s=1080x1920:fps=30[bg];[b]scale=1080:-2[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2[v0]`;

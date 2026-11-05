@@ -56,6 +56,26 @@ Chaque étape enregistre son résultat : une relance reprend là où le traiteme
   (Railway, Fly.io, VPS) avec le même `.env` et un `STORAGE_DIR` partagé — ou adapter `lib/storage.ts` vers S3/R2.
 - `APP_URL` doit être l'URL publique (sert au retour OAuth TikTok).
 
+## Fonctions ajoutées (demandes du client)
+
+- **Pourquoi Clipr** (`/pourquoi`) : page de présentation avec comparatif factuel.
+- **Tendances** (`/tendances` public, `/tendances-du-moment` dans l'appli) : vidéos longues qui montent sur YouTube
+  (vues par heure, clé « YouTube Data API » dans Réglages), recherches en hausse (Google Trends) et idées générées
+  pour le thème du client. Relevé automatique toutes les 6 h par le worker. Boutons « Clipper », « Reprendre », « Créer la vidéo ».
+- **Vidéos IA et séries** (`/videos-ia`) : personnages réutilisables (humain, animal, objet…), séries dont chaque épisode
+  se souvient des précédents. Pipeline : script LLM → voix off (OpenAI TTS) → une image par scène animée en mouvement
+  de caméra (ou un plan vidéo Replicate) → montage → sous-titres animés → miniature. Durée réglable de 15 s à 10 min.
+  Tout est enregistré automatiquement et reprend là où il s'est arrêté en cas d'échec.
+- **Reprendre une vidéo** (`/reprendre`) : transcrit une vidéo (fichier ou lien), en analyse la mécanique et écrit une version originale.
+- **Miniatures** : générées à la fin de chaque rendu (image la plus nette, sans sous-titres, titre avec un mot clé en jaune).
+- **Facebook** : connexion d'une Page via l'app Meta du client, publication en Reels.
+- **Publication automatique** (`/comptes`) : créneaux quotidiens ; chaque clip ou épisode prêt part au prochain créneau libre sur TikTok et/ou Facebook.
+- **Statistiques** (`/statistiques`) : abonnés, vues, j'aime, meilleures vidéos, relevés toutes les 6 h, courbe d'évolution.
+- Clips jusqu'à 180 s.
+
+La charte graphique suit le guide unslop (unslop par Damir Sokolovsky, @heydamir, CC BY 4.0) : une seule couleur d'accent,
+le jaune des sous-titres, et le « mot actif » comme signature.
+
 ## Pas encore fait (prochaines étapes du plan)
 
 - Paiement Stripe (les minutes sont gérées par un registre de crédits, ajout manuel par l'admin dans Réglages).
@@ -69,5 +89,6 @@ Chaque étape enregistre son résultat : une relance reprend là où le traiteme
 npm test   # chiffrement, candidats, sous-titres ASS, rendu FFmpeg 9:16 réel
 ```
 
-`tests/mock-openai.mjs` simule OpenAI pour un essai de bout en bout sans frais :
-`OPENAI_BASE_URL=http://127.0.0.1:4010/v1` avant `npm start` et `npm run worker`.
+`tests/mock-openai.mjs` simule OpenAI, YouTube et Google Trends pour un essai de bout en bout sans frais
+(données d'exemple) : `OPENAI_BASE_URL=http://127.0.0.1:4010/v1 YOUTUBE_API_BASE=http://127.0.0.1:4010/youtube TRENDS_RSS_URL=http://127.0.0.1:4010/rss`
+avant `npm start` et `npm run worker`.

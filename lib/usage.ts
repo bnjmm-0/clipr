@@ -14,6 +14,8 @@ export const DEFAULT_PRICES: Record<string, { price: number; per: string }> = {
   "openai:whisper-1": { price: 0.006, per: "minute" },
   "groq:whisper-large-v3-turbo": { price: 0.04 / 60, per: "minute" },
   "openai:gpt-image-1": { price: 0.04, per: "image" },
+  "openai:gpt-4o-mini-tts": { price: 0.015, per: "minute" },
+  "openai:tts-1": { price: 0.015 * 1.5, per: "minute" },
   "replicate:image": { price: 0.03, per: "image" },
   "replicate:video": { price: 0.5, per: "vidéo" },
 };

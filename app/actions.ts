@@ -53,6 +53,7 @@ export async function saveProviders(fd: FormData) {
       llmProvider: String(fd.get("llmProvider")), llmModel: String(fd.get("llmModel")).trim(), sttProvider: String(fd.get("sttProvider")),
       imageProvider: String(fd.get("imageProvider")), imageModel: String(fd.get("imageModel")).trim(), videoModel: String(fd.get("videoModel")).trim(),
       freeMinutes: Math.max(0, Number(fd.get("freeMinutes")) || 0), pricesJson: JSON.stringify(prices),
+      ttsModel: String(fd.get("ttsModel") || "gpt-4o-mini-tts").trim(), trendRegion: String(fd.get("trendRegion") || "FR").toUpperCase().slice(0, 2), trendNiche: String(fd.get("trendNiche") || "").slice(0, 300),
     },
   });
   revalidatePath("/reglages");
@@ -83,7 +84,7 @@ export async function createProject(fd: FormData) {
   if (fd.get("rights") !== "on") throw new Error("Vous devez confirmer détenir les droits sur la vidéo");
   const url = String(fd.get("url") || "").trim();
   const min = Math.max(10, Math.min(90, Number(fd.get("minClipSec")) || 20));
-  const max = Math.max(min + 5, Math.min(120, Number(fd.get("maxClipSec")) || 60));
+  const max = Math.max(min + 5, Math.min(180, Number(fd.get("maxClipSec")) || 60));
   const p = await prisma.project.create({
     data: {
       userId: u.id, title: String(fd.get("title") || "") || (url ? "Vidéo importée" : "Nouveau projet"), language: String(fd.get("language") || "fr"),
@@ -157,13 +158,161 @@ export async function setClipStatus(clipId: string, status: "ready" | "discarded
 }
 
 export async function publishClip(fd: FormData) {
-  const { c } = await ownClip(String(fd.get("clipId")));
-  if (!(await featureEnabled("tiktokPublish"))) throw new Error("Publication désactivée");
+  const u = await requireUser();
+  const clipId = String(fd.get("clipId") || "") || undefined;
+  const episodeId = String(fd.get("episodeId") || "") || undefined;
+  if (clipId) await ownClip(clipId);
+  if (episodeId && !(await prisma.episode.findFirst({ where: { id: episodeId, userId: u.id } }))) throw new Error("Vidéo introuvable");
   const when = String(fd.get("scheduledAt") || "");
   const scheduledAt = when ? new Date(when) : null;
-  const pub = await prisma.publication.create({ data: { clipId: c.id, platform: "tiktok", caption: String(fd.get("caption") || c.title), scheduledAt } });
-  await enqueue("publish", { publicationId: pub.id, privacy: String(fd.get("privacy") || "SELF_ONLY") }, c.projectId, scheduledAt ?? undefined);
-  revalidatePath(`/projets/${c.projectId}`);
+  const platforms = fd.getAll("platform").map(String).filter((p) => p === "tiktok" || p === "facebook");
+  for (const platform of platforms) {
+    if (!(await featureEnabled(platform === "facebook" ? "facebookPublish" : "tiktokPublish"))) continue;
+    const pub = await prisma.publication.create({ data: { userId: u.id, clipId, episodeId, platform, caption: String(fd.get("caption") || ""), privacy: String(fd.get("privacy") || "SELF_ONLY"), scheduledAt } });
+    await enqueue("publish", { publicationId: pub.id }, undefined, scheduledAt ?? undefined);
+  }
+  revalidatePath("/", "layout");
+}
+
+export async function cancelPublication(id: string) {
+  const u = await requireUser();
+  await prisma.publication.updateMany({ where: { id, userId: u.id, state: "scheduled" }, data: { state: "failed", error: "Annulée" } });
+  revalidatePath("/comptes");
+}
+
+// ——— Comptes connectés et publication automatique ———
+export async function saveAutoPublish(fd: FormData) {
+  const u = await requireUser();
+  const times = String(fd.get("times") || "").split(/[,\s]+/).filter((t) => /^\d{1,2}:\d{2}$/.test(t)).map((t) => t.padStart(5, "0"));
+  const data = { enabled: fd.get("enabled") === "on", platforms: fd.getAll("platforms").map(String), times, clips: fd.get("clips") === "on", episodes: fd.get("episodes") === "on", privacy: String(fd.get("privacy") || "SELF_ONLY") };
+  await prisma.user.update({ where: { id: u.id }, data: { autoPublishJson: JSON.stringify(data) } });
+  revalidatePath("/comptes");
+}
+
+export async function disconnectAccount(platform: string) {
+  const u = await requireUser();
+  await prisma.socialAccount.deleteMany({ where: { userId: u.id, platform } });
+  revalidatePath("/comptes");
+}
+
+export async function refreshStats() {
+  const u = await requireUser();
+  await enqueue("stats", { userId: u.id });
+  revalidatePath("/statistiques");
+}
+
+// ——— Tendances ———
+export async function refreshTrendsNow() {
+  await requireAdmin();
+  if (!(await prisma.job.count({ where: { type: "trends", state: { in: ["queued", "running"] } } }))) await enqueue("trends", {});
+  revalidatePath("/tendances-du-moment");
+}
+
+// ——— Personnages, séries, épisodes IA ———
+export async function createCharacter(fd: FormData) {
+  const u = await requireUser();
+  const name = String(fd.get("name") || "").trim().slice(0, 60);
+  const look = String(fd.get("look") || "").trim().slice(0, 1200);
+  if (!name || !look) return;
+  await prisma.character.create({ data: { userId: u.id, name, look, personality: String(fd.get("personality") || "").slice(0, 600), voice: String(fd.get("voice") || "alloy"), visualStyle: String(fd.get("visualStyle") || "cinématique réaliste").slice(0, 120) } });
+  revalidatePath("/videos-ia");
+}
+
+export async function deleteCharacter(id: string) {
+  const u = await requireUser();
+  await prisma.character.deleteMany({ where: { id, userId: u.id } });
+  revalidatePath("/videos-ia");
+}
+
+const clampDur = (v: unknown) => Math.max(15, Math.min(600, Number(v) || 60));
+
+export async function createSeries(fd: FormData) {
+  const u = await requireUser();
+  const title = String(fd.get("title") || "").trim().slice(0, 80);
+  const premise = String(fd.get("premise") || "").trim().slice(0, 2000);
+  if (!title || !premise) return;
+  const s = await prisma.series.create({ data: { userId: u.id, title, premise, characterId: String(fd.get("characterId") || "") || null, durationSec: clampDur(fd.get("durationSec")), language: String(fd.get("language") || "fr"), captionStyle: String(fd.get("captionStyle") || "bold") } });
+  if (fd.get("startNow") === "on") await startEpisode(u.id, { seriesId: s.id, brief: premise, visualMode: String(fd.get("visualMode") || "image") });
+  revalidatePath("/videos-ia");
+}
+
+async function startEpisode(userId: string, o: { seriesId?: string; brief: string; origin?: string; durationSec?: number; characterId?: string | null; captionStyle?: string; language?: string; visualMode?: string; sourceUrl?: string | null; title?: string; queue?: boolean }) {
+  let number = 1, dur = o.durationSec ?? 60, style = o.captionStyle ?? "bold", lang = o.language ?? "fr";
+  if (o.seriesId) {
+    const s = await prisma.series.findFirstOrThrow({ where: { id: o.seriesId, userId } });
+    number = (await prisma.episode.count({ where: { seriesId: s.id } })) + 1;
+    dur = o.durationSec ?? s.durationSec; style = s.captionStyle; lang = s.language;
+  }
+  const ep = await prisma.episode.create({ data: {
+    userId, seriesId: o.seriesId, number, title: o.title || (o.seriesId ? `Épisode ${number}` : "Nouvelle vidéo"), brief: o.brief.slice(0, 4000), origin: o.origin ?? (o.seriesId ? "series" : "manual"),
+    durationSec: dur, captionStyle: style, language: lang, characterId: o.characterId ?? null, visualMode: o.visualMode === "video" ? "video" : "image", sourceUrl: o.sourceUrl ?? null,
+    status: o.queue === false ? "uploading" : "queued",
+  } });
+  if (o.queue !== false) await enqueue("episode", { episodeId: ep.id });
+  return ep;
+}
+
+export async function nextEpisode(seriesId: string, fd?: FormData) {
+  const u = await requireUser();
+  const brief = String(fd?.get("brief") || "").trim();
+  const s = await prisma.series.findFirstOrThrow({ where: { id: seriesId, userId: u.id } });
+  await startEpisode(u.id, { seriesId, brief: brief || `Écris la suite de la série. ${s.premise}`, visualMode: String(fd?.get("visualMode") || "image") });
+  revalidatePath("/videos-ia");
+}
+
+export async function createEpisode(fd: FormData) {
+  const u = await requireUser();
+  if (!(await featureEnabled("aiVideos"))) throw new Error("Fonction désactivée");
+  const brief = String(fd.get("brief") || "").trim();
+  if (!brief) return;
+  const ep = await startEpisode(u.id, { brief, origin: String(fd.get("origin") || "manual"), durationSec: clampDur(fd.get("durationSec")), characterId: String(fd.get("characterId") || "") || null,
+    captionStyle: String(fd.get("captionStyle") || "bold"), language: String(fd.get("language") || "fr"), visualMode: String(fd.get("visualMode") || "image"), title: String(fd.get("title") || "") || undefined });
+  redirect(`/videos-ia/${ep.id}`);
+}
+
+// Reprendre une vidéo : lien ou fichier (envoyé ensuite par le navigateur), puis script original et génération.
+export async function createRemix(fd: FormData) {
+  const u = await requireUser();
+  if (!(await featureEnabled("remix"))) throw new Error("Fonction désactivée");
+  if (fd.get("rights") !== "on") throw new Error("Confirmez que vous pouvez utiliser cette vidéo comme source");
+  const url = String(fd.get("url") || "").trim() || null;
+  const ep = await startEpisode(u.id, {
+    brief: String(fd.get("brief") || "Reprends la mécanique de cette vidéo.").slice(0, 2000), origin: "remix", sourceUrl: url, durationSec: clampDur(fd.get("durationSec")),
+    characterId: String(fd.get("characterId") || "") || null, captionStyle: String(fd.get("captionStyle") || "bold"), language: String(fd.get("language") || "fr"),
+    visualMode: String(fd.get("visualMode") || "image"), title: "Vidéo reprise", queue: !!url,
+  });
+  return { id: ep.id };
+}
+
+export async function retryEpisode(id: string) {
+  const u = await requireUser();
+  const ep = await prisma.episode.findFirst({ where: { id, userId: u.id } });
+  if (!ep) return;
+  await prisma.episode.update({ where: { id }, data: { status: "queued", error: null } });
+  await enqueue("episode", { episodeId: id });
+  revalidatePath(`/videos-ia/${id}`);
+}
+
+export async function rewriteEpisode(id: string) {
+  const u = await requireUser();
+  const ep = await prisma.episode.findFirst({ where: { id, userId: u.id } });
+  if (!ep) return;
+  const fs = await import("node:fs");
+  const { episodeDir } = await import("@/lib/pipeline/episode");
+  const dir = episodeDir(id);
+  for (const f of fs.readdirSync(dir)) if (!f.startsWith("source")) fs.rmSync(`${dir}/${f}`, { force: true });
+  await prisma.episode.update({ where: { id }, data: { scriptJson: null, status: "queued", error: null, filePath: null, coverPath: null, thumbPath: null, progress: 0 } });
+  await enqueue("episode", { episodeId: id });
+  revalidatePath(`/videos-ia/${id}`);
+}
+
+export async function deleteEpisode(id: string) {
+  const u = await requireUser();
+  await prisma.episode.deleteMany({ where: { id, userId: u.id } });
+  const fs = await import("node:fs");
+  const { STORAGE_DIR } = await import("@/lib/storage");
+  fs.rmSync(`${STORAGE_DIR}/episodes/${id}`, { recursive: true, force: true });
+  redirect("/videos-ia");
 }
 
 // ——— Génération texte → image / vidéo ———
@@ -204,10 +353,5 @@ export async function runCoach(_: FormState, fd: FormData): Promise<FormState> {
   } catch (e) { return { error: (e as Error).message }; }
 }
 
-export async function disconnectTikTok() {
-  const u = await requireUser();
-  await prisma.socialAccount.deleteMany({ where: { userId: u.id, platform: "tiktok" } });
-  revalidatePath("/coach");
-}
 
 export async function whoami() { return currentUser(); }

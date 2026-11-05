@@ -13,7 +13,7 @@ export async function generateImage(prompt: string, outFile: string, userId: str
     return outFile;
   }
   const key = await requireCredential("openai");
-  const r = await fetch("https://api.openai.com/v1/images/generations", {
+  const r = await fetch(`${process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1"}/images/generations`, {
     method: "POST", headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
     body: JSON.stringify({ model: s.imageModel || "gpt-image-1", prompt, size: "1024x1536", n: 1 }),
   });

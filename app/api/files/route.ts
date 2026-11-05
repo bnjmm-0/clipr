@@ -12,10 +12,16 @@ export async function GET(req: Request) {
   if (!u) return new Response("Non connecté", { status: 401 });
   const q = new URL(req.url).searchParams;
   let file: string | null | undefined, name = "fichier";
+  const kind = q.get("kind");
+  const img = kind === "thumb" || kind === "cover";
   if (q.get("clip")) {
     const c = await prisma.clip.findFirst({ where: { id: q.get("clip")!, project: { userId: u.id } } });
-    file = q.get("kind") === "thumb" ? c?.thumbPath : c?.filePath;
-    name = `${(c?.title || "clip").replace(/[^\p{L}\p{N} _-]/gu, "").slice(0, 60)}.${q.get("kind") === "thumb" ? "jpg" : "mp4"}`;
+    file = kind === "thumb" ? c?.thumbPath : kind === "cover" ? c?.coverPath : c?.filePath;
+    name = `${(c?.title || "clip").replace(/[^\p{L}\p{N} _-]/gu, "").slice(0, 60)}${kind === "cover" ? " - miniature" : ""}.${img ? "jpg" : "mp4"}`;
+  } else if (q.get("episode")) {
+    const e = await prisma.episode.findFirst({ where: { id: q.get("episode")!, userId: u.id } });
+    file = kind === "thumb" ? e?.thumbPath : kind === "cover" ? e?.coverPath : e?.filePath;
+    name = `${(e?.title || "video").replace(/[^\p{L}\p{N} _-]/gu, "").slice(0, 60)}${kind === "cover" ? " - miniature" : ""}.${img ? "jpg" : "mp4"}`;
   } else if (q.get("gen")) {
     const g = await prisma.generation.findFirst({ where: { id: q.get("gen")!, userId: u.id } });
     file = g?.filePath; name = `generation.${g?.kind === "image" ? "png" : "mp4"}`;

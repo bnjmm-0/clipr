@@ -5,6 +5,11 @@ import { prisma } from "../lib/db";
 import { processProject, renderOne } from "../lib/pipeline/process";
 import { generateImage, generateVideo } from "../lib/providers/media";
 import { publishVideo } from "../lib/providers/tiktok";
+import { fbPublishReel } from "../lib/providers/facebook";
+import { processEpisode } from "../lib/pipeline/episode";
+import { refreshTrends, REFRESH_HOURS } from "../lib/trends";
+import { snapshotUser } from "../lib/stats";
+import { featureEnabled } from "../lib/settings";
 import { genDir } from "../lib/storage";
 
 const MAX_ATTEMPTS = 3;
@@ -22,18 +27,27 @@ async function handle(job: { id: string; type: string; payload: string; projectI
       await prisma.generation.update({ where: { id: g.id }, data: { status: "ready", filePath: out } });
       return;
     }
+    case "episode": return processEpisode(p.episodeId);
+    case "trends": await refreshTrends(); return;
+    case "stats": await snapshotUser(p.userId); return;
     case "publish": {
-      const pub = await prisma.publication.findUniqueOrThrow({ where: { id: p.publicationId }, include: { clip: { include: { project: true } } } });
+      const pub = await prisma.publication.findUniqueOrThrow({ where: { id: p.publicationId }, include: { clip: { include: { project: true } }, episode: true } });
+      if (pub.state === "sent" || pub.error === "Annulée") return;
+      if (pub.clip?.status === "discarded") { await prisma.publication.update({ where: { id: pub.id }, data: { state: "failed", error: "Clip écarté : publication annulée" } }); return; }
+      const userId = pub.clip?.project.userId ?? pub.episode?.userId ?? pub.userId!;
+      const file = pub.clip?.filePath ?? pub.episode?.filePath;
+      if (!file) throw new Error("Vidéo pas encore prête");
+      const caption = pub.caption ?? pub.clip?.title ?? pub.episode?.title ?? "";
       await prisma.publication.update({ where: { id: pub.id }, data: { state: "sending" } });
-      const id = await publishVideo(pub.clip.project.userId, pub.clip.filePath!, pub.caption ?? pub.clip.title, p.privacy);
-      await prisma.publication.update({ where: { id: pub.id }, data: { state: "sent", externalId: id } });
+      const id = pub.platform === "facebook" ? await fbPublishReel(userId, file, caption) : await publishVideo(userId, file, caption, p.privacy ?? pub.privacy);
+      await prisma.publication.update({ where: { id: pub.id }, data: { state: "sent", externalId: id, error: null } });
       return;
     }
   }
 }
 
 async function onFail(job: { id: string; type: string; payload: string; projectId: string | null; attempts: number }, err: Error) {
-  const final = job.attempts + 1 >= MAX_ATTEMPTS || /insuffisantes|absente|Import par lien|pas de piste/.test(err.message);
+  const final = job.attempts + 1 >= MAX_ATTEMPTS || /insuffisantes|absente|Import par lien|pas de piste|non connecté|désactivée|Aucun modèle/.test(err.message);
   await prisma.job.update({
     where: { id: job.id },
     data: { state: final ? "failed" : "queued", error: err.message.slice(0, 2000), attempts: { increment: 1 }, runAfter: new Date(Date.now() + 30_000 * (job.attempts + 1)) },
@@ -42,6 +56,7 @@ async function onFail(job: { id: string; type: string; payload: string; projectI
   const p = JSON.parse(job.payload);
   if (job.type === "pipeline") await prisma.project.update({ where: { id: job.projectId! }, data: { status: "failed", error: err.message.slice(0, 1000) } });
   if (job.type === "generate") await prisma.generation.update({ where: { id: p.generationId }, data: { status: "failed", error: err.message.slice(0, 1000) } });
+  if (job.type === "episode") await prisma.episode.update({ where: { id: p.episodeId }, data: { status: "failed", error: err.message.slice(0, 1000) } });
   if (job.type === "publish") await prisma.publication.update({ where: { id: p.publicationId }, data: { state: "failed", error: err.message.slice(0, 1000) } });
 }
 
@@ -61,11 +76,33 @@ async function tick() {
   return true;
 }
 
+// Tâches périodiques : tendances et statistiques toutes les 6 h.
+let lastPeriodic = 0;
+async function periodic() {
+  if (Date.now() - lastPeriodic < 60_000) return;
+  lastPeriodic = Date.now();
+  const due = new Date(Date.now() - REFRESH_HOURS * 36e5);
+  const pending = (type: string) => prisma.job.count({ where: { type, state: { in: ["queued", "running"] } } });
+  if (await featureEnabled("trends")) {
+    const last = await prisma.trendSnapshot.findFirst({ orderBy: { createdAt: "desc" } });
+    if ((!last || last.createdAt < due) && !(await pending("trends"))) await prisma.job.create({ data: { type: "trends" } });
+  }
+  if (await featureEnabled("stats")) {
+    const users = await prisma.socialAccount.findMany({ distinct: ["userId"], select: { userId: true } });
+    for (const { userId } of users) {
+      const last = await prisma.accountSnapshot.findFirst({ where: { userId }, orderBy: { createdAt: "desc" } });
+      const queued = await prisma.job.count({ where: { type: "stats", state: { in: ["queued", "running"] }, payload: { contains: userId } } });
+      if ((!last || last.createdAt < due) && !queued) await prisma.job.create({ data: { type: "stats", payload: JSON.stringify({ userId }) } });
+    }
+  }
+}
+
 async function main() {
   // Au redémarrage, les tâches restées « running » sont remises en file.
   await prisma.job.updateMany({ where: { state: "running" }, data: { state: "queued" } });
   console.log("[worker] prêt");
   for (;;) {
+    await periodic().catch((e) => console.error("[worker] tâches périodiques :", e.message));
     const worked = await tick().catch((e) => { console.error(e); return false; });
     if (!worked) await new Promise((r) => setTimeout(r, 2000));
   }

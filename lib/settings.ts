@@ -8,6 +8,9 @@ export const CREDENTIALS = [
   { name: "replicate", label: "Replicate", help: "Génération d'images et de vidéos (modèles au choix)" },
   { name: "tiktok_client_key", label: "TikTok — Client key", help: "De l'app développeur TikTok créée sous votre compte" },
   { name: "tiktok_client_secret", label: "TikTok — Client secret", help: "De la même app développeur TikTok" },
+  { name: "meta_app_id", label: "Meta — App ID", help: "App développeur Meta (Facebook) créée sous votre compte" },
+  { name: "meta_app_secret", label: "Meta — App secret", help: "De la même app Meta" },
+  { name: "youtube", label: "YouTube Data API", help: "Clé Google Cloud pour relever les vidéos qui montent (Tendances)" },
 ] as const;
 export type CredentialName = (typeof CREDENTIALS)[number]["name"];
 
@@ -17,12 +20,19 @@ export const FEATURES = [
   { key: "textToVideo", label: "Texte → vidéo", help: "Génère de courtes vidéos IA (Replicate)" },
   { key: "tiktokCoach", label: "Coach TikTok", help: "Analyse du compte, planning, scripts" },
   { key: "tiktokPublish", label: "Publication TikTok", help: "Envoi direct et planifié des clips sur TikTok" },
+  { key: "facebookPublish", label: "Publication Facebook", help: "Envoi des vidéos en Reels sur une Page Facebook" },
+  { key: "autoPublish", label: "Publication automatique", help: "Chaque vidéo prête part seule sur les créneaux choisis" },
+  { key: "aiVideos", label: "Vidéos IA et séries", help: "Personnages, épisodes générés et enregistrés automatiquement" },
+  { key: "remix", label: "Reprendre une vidéo", help: "Analyse une vidéo existante et en écrit une version originale" },
+  { key: "trends", label: "Tendances du moment", help: "Vidéos qui montent et idées, mises à jour toutes les 6 h" },
+  { key: "stats", label: "Statistiques des comptes", help: "Abonnés, vues et meilleures vidéos TikTok et Facebook" },
 ] as const;
 export type FeatureKey = (typeof FEATURES)[number]["key"];
 
 export async function getSettings() {
   const s = await prisma.appSettings.upsert({ where: { id: "global" }, update: {}, create: { id: "global" } });
-  return { ...s, features: JSON.parse(s.featuresJson) as Record<FeatureKey, boolean>, prices: JSON.parse(s.pricesJson) as Record<string, number> };
+  const defaults = { clips: true, trends: true } as Partial<Record<FeatureKey, boolean>>;
+  return { ...s, features: { ...defaults, ...JSON.parse(s.featuresJson) } as Record<FeatureKey, boolean>, prices: JSON.parse(s.pricesJson) as Record<string, number> };
 }
 
 export async function featureEnabled(k: FeatureKey) {
