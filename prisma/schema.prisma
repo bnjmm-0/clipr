@@ -1,0 +1,229 @@
+// En dev : SQLite (fichier local). En production : passer provider à "postgresql"
+// et DATABASE_URL vers Neon/Supabase (région UE). Les champs JSON sont stockés en texte
+// pour rester compatibles avec les deux.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String         @id @default(cuid())
+  email        String         @unique
+  name         String?
+  passwordHash String
+  role         String         @default("user") // "admin" = l'exploitant (le client) ; "user" = ses utilisateurs
+  plan         String         @default("free")
+  createdAt    DateTime       @default(now())
+  sessions     Session[]
+  projects     Project[]
+  credits      CreditLedger[]
+  usage        UsageEvent[]
+  social       SocialAccount[]
+  generations  Generation[]
+  coachReports CoachReport[]
+}
+
+model Session {
+  id        String   @id // hash SHA-256 du jeton (le jeton brut n'est que dans le cookie)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+// Réglages de l'instance : une seule ligne (id = "global").
+model AppSettings {
+  id           String   @id @default("global")
+  featuresJson String   @default("{\"clips\":true,\"textToImage\":false,\"textToVideo\":false,\"tiktokCoach\":false,\"tiktokPublish\":false}")
+  llmProvider  String   @default("openai")       // openai | anthropic
+  llmModel     String   @default("gpt-4o-mini")
+  sttProvider  String   @default("openai")       // openai | groq
+  imageProvider String  @default("openai")       // openai | replicate
+  imageModel   String   @default("gpt-image-1")
+  videoModel   String   @default("")             // slug Replicate, ex. "minimax/video-01"
+  pricesJson   String   @default("{}")           // surcharges des tarifs pour le compteur
+  freeMinutes  Int      @default(10)
+  updatedAt    DateTime @updatedAt
+}
+
+// Clés API chiffrées (AES-256-GCM). La valeur en clair n'est jamais renvoyée au navigateur.
+model ApiCredential {
+  id         String   @id @default(cuid())
+  name       String   @unique // openai | anthropic | groq | replicate | tiktok_client_key | tiktok_client_secret
+  ciphertext String
+  iv         String
+  tag        String
+  last4      String
+  updatedAt  DateTime @updatedAt
+}
+
+model Project {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title        String
+  status       String   @default("queued") // queued | processing | ready | failed
+  stage        String   @default("import")
+  progress     Int      @default(0)
+  language     String   @default("fr")
+  minClipSec   Int      @default(20)
+  maxClipSec   Int      @default(60)
+  clipCount    Int      @default(6)
+  captionStyle String   @default("bold")
+  cropMode     String   @default("center") // center | wide
+  error        String?
+  rightsAccepted Boolean @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  source       Source?
+  clips        Clip[]
+  jobs         Job[]
+}
+
+model Source {
+  id          String   @id @default(cuid())
+  projectId   String   @unique
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  kind        String   // upload | url
+  url         String?
+  originalPath String?
+  normalizedPath String?
+  audioPath   String?
+  durationSec Float?
+  width       Int?
+  height      Int?
+  importState String   @default("pending")
+  transcript  Transcript?
+}
+
+model Transcript {
+  id        String  @id @default(cuid())
+  sourceId  String  @unique
+  source    Source  @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  language  String?
+  text      String
+  wordsJson String  // [{w, s, e}]
+  segmentsJson String
+}
+
+model Clip {
+  id         String   @id @default(cuid())
+  projectId  String
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  startSec   Float
+  endSec     Float
+  score      Int
+  title      String
+  reason     String?
+  style      String
+  cropOffset Float    @default(0.5) // 0 = gauche, 1 = droite (recadrage manuel)
+  captionOverride String? // texte corrigé (JSON des mots)
+  filePath   String?
+  thumbPath  String?
+  status     String   @default("pending") // pending | rendering | ready | failed | discarded
+  createdAt  DateTime @default(now())
+  publications Publication[]
+}
+
+model Job {
+  id         String    @id @default(cuid())
+  projectId  String?
+  project    Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type       String    // pipeline | render_clip | generate | publish
+  payload    String    @default("{}")
+  stage      String?
+  state      String    @default("queued") // queued | running | done | failed
+  error      String?
+  attempts   Int       @default(0)
+  runAfter   DateTime  @default(now())
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+model CreditLedger {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  minutes   Float    // positif = ajout, négatif = consommation
+  reason    String
+  createdAt DateTime @default(now())
+}
+
+// Compteur d'usage : chaque appel API payant est enregistré avec un coût estimé.
+model UsageEvent {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  provider  String
+  kind      String   // llm | transcription | image | video | tiktok
+  model     String?
+  units     Float    // tokens, minutes, images, secondes…
+  unitLabel String
+  costUsd   Float
+  meta      String?
+  createdAt DateTime @default(now())
+}
+
+model Subscription {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  plan      String
+  stripeCustomerId String?
+  stripeSubId String?
+  periodEnd DateTime?
+}
+
+model SocialAccount {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform     String   // tiktok
+  openId       String
+  displayName  String?
+  avatarUrl    String?
+  accessEnc    String   // jeton chiffré (JSON {c,iv,tag})
+  refreshEnc   String?
+  expiresAt    DateTime?
+  scopes       String?
+  createdAt    DateTime @default(now())
+  @@unique([userId, platform])
+}
+
+model Publication {
+  id          String   @id @default(cuid())
+  clipId      String
+  clip        Clip     @relation(fields: [clipId], references: [id], onDelete: Cascade)
+  platform    String
+  caption     String?
+  scheduledAt DateTime?
+  state       String   @default("scheduled") // scheduled | sending | sent | failed
+  externalId  String?
+  error       String?
+  createdAt   DateTime @default(now())
+}
+
+model Generation {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String   // image | video
+  prompt    String
+  status    String   @default("queued")
+  filePath  String?
+  remoteUrl String?
+  error     String?
+  createdAt DateTime @default(now())
+}
+
+model CoachReport {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  input     String
+  output    String
+  createdAt DateTime @default(now())
+}
