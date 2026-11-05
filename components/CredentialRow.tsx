@@ -5,18 +5,19 @@ import { saveCredential, type FormState } from "@/app/actions";
 export default function CredentialRow({ name, label, help, last4 }: { name: string; label: string; help: string; last4?: string }) {
   const [state, run, pending] = useActionState<FormState, FormData>(saveCredential, undefined);
   return (
-    <form action={run} className="toggle" style={{ display: "block" }}>
+    <form action={run} style={{ padding: "16px 0", borderBottom: "1px solid var(--line)" }}>
       <input type="hidden" name="name" value={name} />
-      <div className="row"><b>{label}</b>{last4 ? <span className="pill ok">Enregistrée ••••{last4}</span> : <span className="pill">Non renseignée</span>}<span className="sp" />
-        {last4 && <button name="delete" value="1" className="btn ghost sm" disabled={pending}>Supprimer</button>}
+      <div className="row"><span>{label}</span>
+        <span className="tag"><span className={`dot ${last4 ? "ok" : ""}`} />{last4 ? <span className="num">Enregistrée ····{last4}</span> : "Non renseignée"}</span>
+        <span className="sp" />{last4 && <button name="delete" value="1" className="btn quiet sm" disabled={pending}>Supprimer</button>}
       </div>
-      <div className="small muted" style={{ margin: "4px 0 8px" }}>{help}</div>
-      <div className="row" style={{ flexWrap: "nowrap" }}>
-        <input name="value" type="password" autoComplete="off" placeholder={last4 ? "Remplacer la clé…" : "Coller la clé…"} />
-        <button className="btn sm" disabled={pending}>Enregistrer</button>
+      <div className="xs muted" style={{ margin: "4px 0 8px" }}>{help}</div>
+      <div className="row" style={{ flexWrap: "nowrap", gap: 8 }}>
+        <input name="value" type="password" autoComplete="off" placeholder={last4 ? "Remplacer la clé" : "Coller la clé"} />
+        <button className="btn ghost sm" disabled={pending}>Enregistrer</button>
       </div>
-      {state?.error && <p className="alert small">{state.error}</p>}
-      {state?.ok && <p className="small" style={{ color: "var(--ok)" }}>{state.ok}</p>}
+      {state?.error && <p className="alert">{state.error}</p>}
+      {state?.ok && <p className="okmsg">{state.ok}</p>}
     </form>
   );
 }

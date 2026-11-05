@@ -55,7 +55,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
   if (opts.hook) {
     // Titre d'accroche : glisse depuis le haut, léger zoom, puis s'efface.
     const hook = esc(opts.hook).slice(0, 80);
-    lines.push(`Dialogue: 2,${ts(0)},${ts(Math.min(3, opts.duration))},Hook,,0,0,0,,{\\an8\\move(${x},120,${x},220,0,280)\\fad(150,350)\\fscx85\\fscy85\\t(0,280,\\fscx100\\fscy100)\\3c&H000000FF&\\1c&HFFFFFF&}${hook}`);
+    lines.push(`Dialogue: 2,${ts(0)},${ts(Math.min(3, opts.duration))},Hook,,0,0,0,,{\\an8\\move(${x},120,${x},220,0,280)\\fad(150,350)\\fscx85\\fscy85\\t(0,280,\\fscx100\\fscy100)\\3c&H0AD9F5&\\1c&H141415&}${hook}`);
   }
   for (const g of groupWords(words, st.maxWords)) {
     const gEnd = g[g.length - 1].e + 0.15;

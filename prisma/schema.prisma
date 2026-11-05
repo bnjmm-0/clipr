@@ -25,6 +25,96 @@ model User {
   social       SocialAccount[]
   generations  Generation[]
   coachReports CoachReport[]
+  characters   Character[]
+  series       Series[]
+  episodes     Episode[]
+  snapshots    AccountSnapshot[]
+  // Publication automatique : {"enabled":bool,"platforms":["tiktok","facebook"],"times":["09:00","18:00"],"clips":bool,"episodes":bool,"privacy":"SELF_ONLY"}
+  autoPublishJson String @default("{\"enabled\":false,\"platforms\":[\"tiktok\"],\"times\":[\"12:00\",\"19:00\"],\"clips\":false,\"episodes\":true,\"privacy\":\"SELF_ONLY\"}")
+}
+
+// Personnage IA réutilisable (humain, animal, objet, mascotte, fruit… tout est possible).
+model Character {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  look        String   // description visuelle, injectée dans chaque prompt d'image/vidéo
+  personality String   @default("")
+  voice       String   @default("alloy") // voix de synthèse (OpenAI TTS)
+  visualStyle String   @default("cinématique réaliste")
+  createdAt   DateTime @default(now())
+  series      Series[]
+}
+
+// Série : un concept récurrent dont chaque épisode est généré puis enregistré automatiquement.
+model Series {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  premise     String
+  characterId String?
+  character   Character? @relation(fields: [characterId], references: [id], onDelete: SetNull)
+  durationSec Int       @default(60)
+  language    String    @default("fr")
+  captionStyle String   @default("bold")
+  createdAt   DateTime  @default(now())
+  episodes    Episode[]
+}
+
+// Vidéo IA complète : script → voix → visuels par scène → montage + sous-titres animés.
+model Episode {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  seriesId    String?
+  series      Series?  @relation(fields: [seriesId], references: [id], onDelete: SetNull)
+  number      Int      @default(1)
+  title       String
+  brief       String   // consigne de départ (idée, tendance, vidéo reprise…)
+  origin      String   @default("manual") // manual | series | trend | remix
+  sourceUrl   String?  // vidéo reprise (mode « Reprendre »)
+  durationSec Int      @default(60)
+  captionStyle String  @default("bold")
+  visualMode  String   @default("image") // image (images animées) | video (modèle vidéo Replicate)
+  language    String   @default("fr")
+  characterId String?  // personnage utilisé hors série
+  scriptJson  String?  // {title, hook, scenes:[{narration, visual}], summary}
+  status      String   @default("queued") // queued | processing | ready | failed
+  stage       String   @default("script")
+  progress    Int      @default(0)
+  filePath    String?
+  thumbPath   String?
+  coverPath   String?
+  error       String?
+  createdAt   DateTime @default(now())
+  publications Publication[]
+}
+
+// Tendances relevées toutes les 6 h (vidéos qui montent + idées générées).
+model TrendSnapshot {
+  id        String   @id @default(cuid())
+  region    String   @default("FR")
+  videosJson String  // vidéos YouTube qui montent
+  searchesJson String // recherches Google en hausse
+  ideasJson String   @default("[]") // idées de vidéos proposées par le LLM
+  error     String?
+  createdAt DateTime @default(now())
+}
+
+// Statistiques des comptes connectés, relevées toutes les 6 h pour tracer l'évolution.
+model AccountSnapshot {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform   String
+  followers  Int      @default(0)
+  likes      Int      @default(0)
+  videos     Int      @default(0)
+  views      Int      @default(0)
+  topJson    String   @default("[]")
+  createdAt  DateTime @default(now())
 }
 
 model Session {
@@ -45,6 +135,9 @@ model AppSettings {
   imageProvider String  @default("openai")       // openai | replicate
   imageModel   String   @default("gpt-image-1")
   videoModel   String   @default("")             // slug Replicate, ex. "minimax/video-01"
+  ttsModel     String   @default("gpt-4o-mini-tts") // voix off des vidéos IA (OpenAI)
+  trendRegion  String   @default("FR")
+  trendNiche   String   @default("")              // thème du client pour orienter les idées de tendances
   pricesJson   String   @default("{}")           // surcharges des tarifs pour le compteur
   freeMinutes  Int      @default(10)
   updatedAt    DateTime @updatedAt
@@ -124,6 +217,7 @@ model Clip {
   captionOverride String? // texte corrigé (JSON des mots)
   filePath   String?
   thumbPath  String?
+  coverPath  String?  // miniature travaillée (meilleure image + titre)
   status     String   @default("pending") // pending | rendering | ready | failed | discarded
   createdAt  DateTime @default(now())
   publications Publication[]
@@ -181,8 +275,8 @@ model SocialAccount {
   id           String   @id @default(cuid())
   userId       String
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  platform     String   // tiktok
-  openId       String
+  platform     String   // tiktok | facebook
+  openId       String   // TikTok : open_id ; Facebook : id de la Page
   displayName  String?
   avatarUrl    String?
   accessEnc    String   // jeton chiffré (JSON {c,iv,tag})
@@ -195,10 +289,15 @@ model SocialAccount {
 
 model Publication {
   id          String   @id @default(cuid())
-  clipId      String
-  clip        Clip     @relation(fields: [clipId], references: [id], onDelete: Cascade)
-  platform    String
+  userId      String?
+  clipId      String?
+  clip        Clip?    @relation(fields: [clipId], references: [id], onDelete: Cascade)
+  episodeId   String?
+  episode     Episode? @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  platform    String   // tiktok | facebook
   caption     String?
+  privacy     String   @default("SELF_ONLY")
+  auto        Boolean  @default(false) // créée par la publication automatique
   scheduledAt DateTime?
   state       String   @default("scheduled") // scheduled | sending | sent | failed
   externalId  String?

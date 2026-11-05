@@ -35,34 +35,34 @@ export default function NewProject({ defaultUrl }: { defaultUrl?: string }) {
   }
 
   return (
-    <form action={submit} className="card reveal">
-      <h2>Nouveau projet</h2>
+    <form action={submit} className="panel">
+      <h2 style={{ marginBottom: 16 }}>Nouveau projet</h2>
       <div className={`drop ${over ? "over" : ""}`} onClick={() => fileRef.current?.click()}
         onDragOver={(e) => { e.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)}
         onDrop={(e) => { e.preventDefault(); setOver(false); setFile(e.dataTransfer.files[0] ?? null); }}>
         <input ref={fileRef} type="file" accept="video/*" hidden onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-        {file ? <b>{file.name} · {(file.size / 1e6).toFixed(0)} Mo</b> : <><b>Glissez votre vidéo ici</b><div className="muted small">ou cliquez pour choisir un fichier (voie la plus fiable)</div></>}
+        {file ? <span className="num">{file.name} · {(file.size / 1e6).toFixed(0)} Mo</span> : <><div>Glisse ta vidéo ici</div><div className="xs muted" style={{ marginTop: 4 }}>ou clique pour choisir un fichier, la voie la plus fiable</div></>}
       </div>
-      <label>…ou un lien (YouTube etc. — peut être bloqué depuis un serveur)</label>
+      <label>Ou un lien (YouTube peut bloquer les téléchargements depuis un serveur)</label>
       <input name="url" defaultValue={defaultUrl} placeholder="https://" disabled={!!file} />
-      <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: "0 12px" }}>
         <div><label>Titre</label><input name="title" /></div>
         <div><label>Langue</label><select name="language" defaultValue="fr"><option value="fr">Français</option><option value="en">Anglais</option><option value="ar">Arabe</option><option value="es">Espagnol</option><option value="auto">Détection auto</option></select></div>
         <div><label>Durée min (s)</label><input name="minClipSec" type="number" defaultValue={20} min={10} max={90} /></div>
-        <div><label>Durée max (s)</label><input name="maxClipSec" type="number" defaultValue={60} min={15} max={120} /></div>
+        <div><label>Durée max (s, jusqu'à 180)</label><input name="maxClipSec" type="number" defaultValue={60} min={15} max={180} /></div>
         <div><label>Nombre de clips</label><input name="clipCount" type="number" defaultValue={6} min={1} max={15} /></div>
         <div><label>Recadrage</label><select name="cropMode"><option value="center">Suivre le visage</option><option value="wide">Plan large (fond flou)</option></select></div>
       </div>
       <label>Style des sous-titres animés</label>
-      <div className="row">{STYLES.map(([v, l], i) => (
-        <label key={v} className="pill" style={{ margin: 0, cursor: "pointer" }}><input type="radio" name="captionStyle" value={v} defaultChecked={i === 0} /> {l}</label>
+      <div className="seg">{STYLES.map(([v, l], i) => (
+        <label key={v}><input type="radio" name="captionStyle" value={v} defaultChecked={i === 0} />{l}</label>
       ))}</div>
-      <label className="row" style={{ marginTop: 16, color: "var(--text)" }}>
-        <input type="checkbox" name="rights" required /> Je confirme détenir les droits nécessaires sur cette vidéo (voir CGU).
+      <label className="check" style={{ marginTop: 16 }}>
+        <input type="checkbox" name="rights" required /><span className="small">Je confirme détenir les droits nécessaires sur cette vidéo</span>
       </label>
       {err && <p className="alert">{err}</p>}
-      {pct !== null && <div style={{ marginTop: 12 }}><div className="progress"><i style={{ width: `${pct}%` }} /></div><p className="small muted">Envoi : {pct} %</p></div>}
-      <button className="btn" style={{ marginTop: 16 }} disabled={pct !== null}>Lancer le traitement</button>
+      {pct !== null && <div style={{ marginTop: 16 }}><div className="progress"><i style={{ transform: `scaleX(${pct / 100})` }} /></div><p className="xs muted num" style={{ marginTop: 8 }}>Envoi {pct} %</p></div>}
+      <button className="btn accent" style={{ marginTop: 20 }} disabled={pct !== null}>Lancer le traitement</button>
     </form>
   );
 }

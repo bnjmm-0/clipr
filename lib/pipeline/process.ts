@@ -8,6 +8,8 @@ import { chat, parseJsonLoose } from "../providers/llm";
 import { buildCandidates, selectBest, wordsIn, type Scored } from "./candidates";
 import { faceTrack, renderClip } from "./render";
 import { getSettings } from "../settings";
+import { makeCover } from "./cover";
+import { scheduleAuto } from "../autopublish";
 
 const stage = (id: string, s: string, progress: number) =>
   prisma.project.update({ where: { id }, data: { stage: s, progress, status: "processing" } });
@@ -106,6 +108,10 @@ ${batch.map((c) => `#${c.id} [${Math.round(c.e - c.s)}s] ${c.text.slice(0, 1200)
     done++;
   }
   await prisma.project.update({ where: { id: projectId }, data: { status: "ready", stage: "terminé", progress: 100, error: null } });
+  for (const c of await prisma.clip.findMany({ where: { projectId, status: "ready" } })) {
+    const already = await prisma.publication.count({ where: { clipId: c.id } });
+    if (!already) await scheduleAuto(p.userId, { clipId: c.id, caption: c.title });
+  }
   // 10. Notification : visible dans l'appli (statut). Branchez Resend ici pour l'email.
 }
 
@@ -126,7 +132,13 @@ export async function renderOne(clipId: string, words?: Word[]) {
       src: src.normalizedPath!, srcW: src.width!, srcH: src.height!, s: c.startSec, e: c.endSec, words: clipWords, style: c.style, hook: c.title,
       cropMode: c.project.cropMode, cropOffset: c.cropOffset, keyframes, outFile, thumbFile, watermark,
     });
-    await prisma.clip.update({ where: { id: clipId }, data: { status: "ready", filePath: outFile, thumbPath: thumbFile } });
+    const coverFile = path.join(dir, `clip_${c.id}_cover.jpg`);
+    // Miniature tirée de la source (sans sous-titres incrustés), au même cadrage que le clip.
+    const cw = Math.round((src.height! * 9) / 16 / 2) * 2;
+    const x = Math.max(0, Math.min(src.width! - cw, Math.round((keyframes[0]?.x ?? c.cropOffset) * src.width! - cw / 2)));
+    const vf = c.project.cropMode === "wide" || src.width! / src.height! < 0.7 ? "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2" : `crop=${cw}:${src.height}:${x}:0,scale=1080:1920`;
+    await makeCover(src.normalizedPath!, c.title, coverFile, { from: c.startSec, to: c.endSec, vf }).catch((e) => console.error("miniature", e.message));
+    await prisma.clip.update({ where: { id: clipId }, data: { status: "ready", filePath: outFile, thumbPath: thumbFile, coverPath: fs.existsSync(coverFile) ? coverFile : null } });
   } catch (e) {
     await prisma.clip.update({ where: { id: clipId }, data: { status: "failed" } });
     throw e;
