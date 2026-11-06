@@ -197,3 +197,16 @@ footer.site .in{max-width:1200px;margin:0 auto;padding:24px 32px;display:flex;ga
   .rank{grid-template-columns:24px 1fr auto}.rank img{display:none}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* Ouverture pilotée par le scroll */
+.intro{position:relative;height:420vh;background:var(--bg0)}
+.intro-stick{position:sticky;top:60px;height:calc(100vh - 60px);overflow:hidden}
+.intro-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:var(--bg0)}
+.intro-shade{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 45%,rgba(15,15,16,.15),rgba(15,15,16,.55) 80%),linear-gradient(to bottom,rgba(15,15,16,.35),transparent 30%)}
+.intro-copy{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:0 32px;text-align:center;will-change:transform,opacity}
+.intro-copy h1{font-size:clamp(36px,6.2vw,84px);line-height:1.05;letter-spacing:-.03em;font-weight:500;max-width:16em;text-shadow:0 2px 40px rgba(0,0,0,.55)}
+.intro-hint{position:absolute;left:0;right:0;bottom:28px;display:flex;flex-direction:column;align-items:center;gap:8px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--text2)}
+.intro-hint i{width:1px;height:28px;background:linear-gradient(var(--accent),transparent);animation:introhint 1.6s var(--ease) infinite}
+@keyframes introhint{0%{transform:scaleY(0);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}51%{transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
+.intro-veil{position:absolute;inset:0;background:var(--bg);opacity:0;pointer-events:none}
+@media (max-width:700px){.intro-video{object-fit:contain}.intro{height:360vh}}
