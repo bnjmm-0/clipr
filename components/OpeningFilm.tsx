@@ -9,8 +9,8 @@ const src = (dir: "d" | "m", i: number) => `/intro/${dir}/${String(i + 1).padSta
 
 // Fenêtres d'apparition des textes, en part du défilement (0 → 1).
 const BEATS: [number, number, number, number][] = [
-  [-1, 0, 0.1, 0.2], // A : visible dès l'arrivée, part vers 0,2
-  [0.24, 0.3, 0.42, 0.5], // B
+  [-1, 0, 0.08, 0.15], // A : visible dès l'arrivée, part vers 0,15
+  [0.17, 0.22, 0.33, 0.4], // B : avant le flash lumineux de la vidéo
   [0.8, 0.88, 2, 2], // C : reste jusqu'à la fin
 ];
 const ease = (k: number) => 1 - Math.pow(1 - Math.min(1, Math.max(0, k)), 3);
