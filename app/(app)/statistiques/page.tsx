@@ -7,7 +7,7 @@ import Poller from "@/components/Poller";
 import { refreshStats } from "@/app/actions";
 
 const n = (x: number) => x.toLocaleString("fr-FR");
-const LABEL: Record<string, string> = { tiktok: "TikTok", facebook: "Facebook" };
+const LABEL: Record<string, string> = { tiktok: "TikTok", facebook: "Facebook", youtube: "YouTube" };
 
 export default async function Stats({ searchParams }: { searchParams: Promise<{ p?: string }> }) {
   const u = await requireUser();
@@ -30,7 +30,7 @@ export default async function Stats({ searchParams }: { searchParams: Promise<{ 
         <div className="seg">{accounts.map((a) => <Link key={a.id} href={`?p=${a.platform}`} className={`btn sm ${a.platform === platform ? "" : "ghost"}`}>{LABEL[a.platform]}{a.displayName ? ` · ${a.displayName}` : ""}</Link>)}</div>
         {accounts.length > 0 && <form action={refreshStats}><button className="btn ghost sm" disabled={running > 0}>{running ? "Relevé en cours" : "Relever maintenant"}</button></form>}
       </div>
-      {accounts.length === 0 ? <p className="note">Connecte un compte TikTok ou une Page Facebook dans <Link href="/comptes" style={{ textDecoration: "underline" }}>Comptes et publication</Link>.</p> : (
+      {accounts.length === 0 ? <p className="note">Connecte un compte TikTok, une Page Facebook ou une chaîne YouTube dans <Link href="/comptes" style={{ textDecoration: "underline" }}>Comptes et publication</Link>.</p> : (
         <div className="stack-24">
           <div className="grid" style={{ gridTemplateColumns: "repeat(4,minmax(0,1fr))" }}>
             {cards.map(([label, key]) => {

@@ -11,8 +11,10 @@ export default function PublishForm({ clipId, episodeId, caption, platforms }: {
       <label>Publier sur</label>
       <div className="seg">{platforms.map((p, i) => <label key={p.id}><input type="checkbox" name="platform" value={p.id} defaultChecked={i === 0} />{p.label}</label>)}</div>
       <label>Légende</label><textarea name="caption" rows={3} defaultValue={caption} />
-      <label>Visibilité TikTok</label>
-      <select name="privacy"><option value="SELF_ONLY">Privé (obligatoire tant que l'app TikTok n'est pas validée)</option><option value="PUBLIC_TO_EVERYONE">Public</option><option value="MUTUAL_FOLLOW_FRIENDS">Amis</option></select>
+      {platforms.some((p) => p.id === "tiktok") && <><label>Visibilité TikTok</label>
+      <select name="privacy"><option value="SELF_ONLY">Privé (obligatoire tant que l'app TikTok n'est pas validée)</option><option value="PUBLIC_TO_EVERYONE">Public</option><option value="MUTUAL_FOLLOW_FRIENDS">Amis</option></select></>}
+      {platforms.some((p) => p.id === "youtube") && <><label>Visibilité YouTube (Short)</label>
+      <select name="ytPrivacy"><option value="private">Privée (imposée tant que le projet Google n'est pas audité)</option><option value="unlisted">Non répertoriée</option><option value="public">Publique</option></select></>}
       <label>Planifier (vide = maintenant)</label><input type="datetime-local" name="scheduledAt" />
       <button className="btn sm" style={{ marginTop: 16 }}>Publier</button>
     </form>

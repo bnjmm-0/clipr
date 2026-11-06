@@ -1,5 +1,6 @@
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { YT_DAILY_QUOTA, YT_QUOTA, quotaDayStart } from "@/lib/providers/youtube";
 
 const usd = (n: number) => `${n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
 
@@ -20,6 +21,10 @@ export default async function Usage({ searchParams }: { searchParams: Promise<{ 
   for (const e of events) { const d = e.createdAt.toISOString().slice(0, 10); perDay.set(d, (perDay.get(d) ?? 0) + e.costUsd); }
   const dayList = [...Array(Math.min(days, 30))].map((_, i) => { const d = new Date(Date.now() - (Math.min(days, 30) - 1 - i) * 864e5).toISOString().slice(0, 10); return { d, v: perDay.get(d) ?? 0 }; });
   const max = Math.max(...dayList.map((x) => x.v), 0.0001);
+  // Le quota YouTube est commun à tout le projet Google : on l'affiche pour tous les utilisateurs confondus.
+  const yt = await prisma.usageEvent.aggregate({ where: { provider: "youtube", kind: "quota", createdAt: { gte: quotaDayStart() } }, _sum: { units: true } });
+  const ytUsed = yt._sum.units ?? 0;
+  const ytConnected = (await prisma.socialAccount.count({ where: { platform: "youtube" } })) > 0;
   return (
     <div className="page">
       <div className="pagehead"><div><h1>Usage</h1><p>Dépense estimée à partir des tarifs saisis dans Réglages. La facture exacte reste celle de chaque fournisseur.{u.role === "admin" ? " Vue de tous les utilisateurs." : ""}</p></div><span className="sp" />
@@ -29,6 +34,11 @@ export default async function Usage({ searchParams }: { searchParams: Promise<{ 
         <div className="card stat"><div className="xs muted">Appels API</div><div className="v">{events.length}</div></div>
         <div className="card stat"><div className="xs muted">Minutes transcrites</div><div className="v">{events.filter((e) => e.kind === "transcription").reduce((a, e) => a + e.units, 0).toLocaleString("fr-FR", { maximumFractionDigits: 1 })}</div></div>
       </div>
+      {ytConnected && <div className="card stat" style={{ marginTop: 24 }}>
+          <div className="xs muted">Quota YouTube du jour (remis à zéro à minuit, heure du Pacifique)</div>
+          <div className="v num">{ytUsed.toLocaleString("fr-FR")} <span className="small muted">/ {YT_DAILY_QUOTA.toLocaleString("fr-FR")} unités · environ {Math.max(0, Math.floor((YT_DAILY_QUOTA - ytUsed) / YT_QUOTA.upload))} Shorts restants</span></div>
+          <div style={{ height: 4, background: "var(--line)", borderRadius: 2, marginTop: 12 }}><div style={{ width: `${Math.min(100, (ytUsed / YT_DAILY_QUOTA) * 100)}%`, height: "100%", background: ytUsed / YT_DAILY_QUOTA > 0.85 ? "var(--err)" : "var(--accent)", borderRadius: 2 }} /></div>
+        </div>}
       <div className="panel" style={{ marginTop: 24 }}>
         <h2 style={{ marginBottom: 16 }}>Par jour</h2>
         <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 160, borderBottom: "1px solid var(--line)" }}>

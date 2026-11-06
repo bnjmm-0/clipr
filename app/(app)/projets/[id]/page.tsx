@@ -1,3 +1,4 @@
+import { platformLabel } from "@/lib/settings";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
@@ -51,7 +52,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
       {pubs.length > 0 && (
         <div className="panel" style={{ marginTop: 32 }}><h2 style={{ marginBottom: 8 }}>Publications</h2>
           <table><thead><tr><th>Clip</th><th>Plateforme</th><th>Prévue</th><th>État</th></tr></thead><tbody>
-            {pubs.map((x) => <tr key={x.id}><td>{x.title}</td><td>{x.platform === "facebook" ? "Facebook" : "TikTok"}</td><td className="num">{x.scheduledAt?.toLocaleString("fr-FR") ?? "immédiate"}</td><td>{x.state}{x.error ? ` · ${x.error}` : ""}</td></tr>)}
+            {pubs.map((x) => <tr key={x.id}><td>{x.title}</td><td>{platformLabel(x.platform)}</td><td className="num">{x.scheduledAt?.toLocaleString("fr-FR") ?? "immédiate"}</td><td>{x.state}{x.error ? ` · ${x.error}` : ""}</td></tr>)}
           </tbody></table></div>
       )}
     </div>

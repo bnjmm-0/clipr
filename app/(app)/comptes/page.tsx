@@ -4,7 +4,7 @@ import { credentialStatus, getSettings } from "@/lib/settings";
 import { parseAuto } from "@/lib/autopublish";
 import { cancelPublication, disconnectAccount, saveAutoPublish } from "@/app/actions";
 
-const LABEL: Record<string, string> = { tiktok: "TikTok", facebook: "Facebook" };
+const LABEL: Record<string, string> = { tiktok: "TikTok", facebook: "Facebook", youtube: "YouTube" };
 
 export default async function Accounts() {
   const u = await requireUser();
@@ -16,10 +16,11 @@ export default async function Accounts() {
   const platforms = [
     { id: "tiktok", on: s.features.tiktokPublish, ready: !!creds.tiktok_client_key && !!creds.tiktok_client_secret, href: "/api/tiktok/connect" },
     { id: "facebook", on: s.features.facebookPublish, ready: !!creds.meta_app_id && !!creds.meta_app_secret, href: "/api/facebook/connect" },
+    { id: "youtube", on: s.features.youtubePublish, ready: !!creds.google_client_id && !!creds.google_client_secret, href: "/api/youtube/connect" },
   ].filter((p) => p.on);
   return (
     <div className="page">
-      <div className="pagehead"><div><h1>Comptes et publication</h1><p>Connecte TikTok et ta Page Facebook, puis choisis tes créneaux : chaque vidéo prête part toute seule au prochain créneau libre.</p></div></div>
+      <div className="pagehead"><div><h1>Comptes et publication</h1><p>Connecte TikTok, ta Page Facebook et ta chaîne YouTube, puis choisis tes créneaux : chaque vidéo prête part toute seule au prochain créneau libre.</p></div></div>
       <div className="grid" style={{ gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 24, alignItems: "start" }}>
         <div className="panel">
           <h2>Comptes connectés</h2>
@@ -34,8 +35,8 @@ export default async function Accounts() {
               </div>
             );
           })}
-          {platforms.length === 0 && <p className="note" style={{ marginTop: 12 }}>Active la publication TikTok ou Facebook dans Réglages.</p>}
-          <p className="xs muted" style={{ marginTop: 16 }}>Tant que TikTok n'a pas validé ton app, les vidéos y sont publiées en privé.</p>
+          {platforms.length === 0 && <p className="note" style={{ marginTop: 12 }}>Active la publication TikTok, Facebook ou YouTube dans Réglages.</p>}
+          <p className="xs muted" style={{ marginTop: 16 }}>Tant que TikTok n'a pas validé ton app, les vidéos y sont publiées en privé. Même chose sur YouTube tant que ton projet Google n'a pas passé l'audit de l'API.</p>
         </div>
 
         {s.features.autoPublish && (
@@ -43,13 +44,15 @@ export default async function Accounts() {
             <h2>Publication automatique</h2>
             <label className="check" style={{ marginTop: 16 }}><input type="checkbox" name="enabled" defaultChecked={a.enabled} /><span><span>Activer</span><span className="xs muted" style={{ display: "block" }}>Chaque vidéo terminée est planifiée sur le prochain créneau libre</span></span></label>
             <label>Plateformes</label>
-            <div className="seg">{["tiktok", "facebook"].map((p) => <label key={p}><input type="checkbox" name="platforms" value={p} defaultChecked={a.platforms.includes(p)} />{LABEL[p]}</label>)}</div>
+            <div className="seg">{platforms.map((x) => x.id).map((p) => <label key={p}><input type="checkbox" name="platforms" value={p} defaultChecked={a.platforms.includes(p)} />{LABEL[p]}</label>)}</div>
             <label>Créneaux quotidiens (heures séparées par des virgules)</label>
             <input name="times" defaultValue={a.times.join(", ")} placeholder="09:00, 12:30, 19:00" />
             <label>Ce qui part automatiquement</label>
             <div className="seg"><label><input type="checkbox" name="episodes" defaultChecked={a.episodes} />Vidéos IA et épisodes</label><label><input type="checkbox" name="clips" defaultChecked={a.clips} />Clips</label></div>
             <label>Visibilité TikTok</label>
             <select name="privacy" defaultValue={a.privacy}><option value="SELF_ONLY">Privé</option><option value="PUBLIC_TO_EVERYONE">Public</option><option value="MUTUAL_FOLLOW_FRIENDS">Amis</option></select>
+            {s.features.youtubePublish && <><label>Visibilité YouTube</label>
+            <select name="ytPrivacy" defaultValue={a.ytPrivacy}><option value="private">Privée</option><option value="unlisted">Non répertoriée</option><option value="public">Publique</option></select></>}
             <button className="btn sm" style={{ marginTop: 20 }}>Enregistrer</button>
           </form>
         )}

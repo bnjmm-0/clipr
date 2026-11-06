@@ -10,7 +10,9 @@ export const CREDENTIALS = [
   { name: "tiktok_client_secret", label: "TikTok — Client secret", help: "De la même app développeur TikTok" },
   { name: "meta_app_id", label: "Meta — App ID", help: "App développeur Meta (Facebook) créée sous votre compte" },
   { name: "meta_app_secret", label: "Meta — App secret", help: "De la même app Meta" },
-  { name: "youtube", label: "YouTube Data API", help: "Clé Google Cloud pour relever les vidéos qui montent (Tendances)" },
+  { name: "youtube", label: "YouTube Data API — Clé", help: "Clé Google Cloud pour relever les vidéos qui montent (Tendances)" },
+  { name: "google_client_id", label: "YouTube — Client ID OAuth", help: "Du projet Google Cloud créé sous votre compte (publication des Shorts)" },
+  { name: "google_client_secret", label: "YouTube — Client secret OAuth", help: "Du même identifiant OAuth Google" },
   { name: "elevenlabs", label: "ElevenLabs", help: "Voix off réalistes (outil ElevenLabs de Conseils IA)" },
 ] as const;
 export type CredentialName = (typeof CREDENTIALS)[number]["name"];
@@ -22,13 +24,20 @@ export const FEATURES = [
   { key: "tiktokCoach", label: "Coach TikTok", help: "Analyse du compte, planning, scripts" },
   { key: "tiktokPublish", label: "Publication TikTok", help: "Envoi direct et planifié des clips sur TikTok" },
   { key: "facebookPublish", label: "Publication Facebook", help: "Envoi des vidéos en Reels sur une Page Facebook" },
+  { key: "youtubePublish", label: "Publication YouTube", help: "Envoi des clips en Shorts sur une chaîne YouTube" },
   { key: "autoPublish", label: "Publication automatique", help: "Chaque vidéo prête part seule sur les créneaux choisis" },
   { key: "aiVideos", label: "Vidéos IA et séries", help: "Personnages, épisodes générés et enregistrés automatiquement" },
   { key: "remix", label: "Reprendre une vidéo", help: "Analyse une vidéo existante et en écrit une version originale" },
   { key: "trends", label: "Tendances du moment", help: "Vidéos qui montent et idées, mises à jour toutes les 6 h" },
-  { key: "stats", label: "Statistiques des comptes", help: "Abonnés, vues et meilleures vidéos TikTok et Facebook" },
+  { key: "stats", label: "Statistiques des comptes", help: "Abonnés, vues et meilleures vidéos TikTok, Facebook et YouTube" },
 ] as const;
 export type FeatureKey = (typeof FEATURES)[number]["key"];
+
+// Plateformes de publication : nom affiché et fonction de Réglages qui les active.
+export const PLATFORMS = { tiktok: { label: "TikTok", feature: "tiktokPublish" }, facebook: { label: "Facebook", feature: "facebookPublish" }, youtube: { label: "YouTube", feature: "youtubePublish" } } as const satisfies Record<string, { label: string; feature: FeatureKey }>;
+export type Platform = keyof typeof PLATFORMS;
+export const isPlatform = (p: string): p is Platform => p in PLATFORMS;
+export const platformLabel = (p: string) => (isPlatform(p) ? PLATFORMS[p].label : p);
 
 export async function getSettings() {
   const s = await prisma.appSettings.upsert({ where: { id: "global" }, update: {}, create: { id: "global" } });

@@ -7,6 +7,7 @@ import { generateImage, generateVideo } from "../lib/providers/media";
 import { runTool } from "../lib/providers/tools";
 import { publishVideo } from "../lib/providers/tiktok";
 import { fbPublishReel } from "../lib/providers/facebook";
+import { ytPublishShort } from "../lib/providers/youtube";
 import { processEpisode } from "../lib/pipeline/episode";
 import { refreshTrends, REFRESH_HOURS } from "../lib/trends";
 import { snapshotUser } from "../lib/stats";
@@ -42,7 +43,9 @@ async function handle(job: { id: string; type: string; payload: string; projectI
       if (!file) throw new Error("Vidéo pas encore prête");
       const caption = pub.caption ?? pub.clip?.title ?? pub.episode?.title ?? "";
       await prisma.publication.update({ where: { id: pub.id }, data: { state: "sending" } });
-      const id = pub.platform === "facebook" ? await fbPublishReel(userId, file, caption) : await publishVideo(userId, file, caption, p.privacy ?? pub.privacy);
+      const id = pub.platform === "facebook" ? await fbPublishReel(userId, file, caption)
+        : pub.platform === "youtube" ? await ytPublishShort(userId, file, caption, pub.privacy)
+        : await publishVideo(userId, file, caption, p.privacy ?? pub.privacy);
       await prisma.publication.update({ where: { id: pub.id }, data: { state: "sent", externalId: id, error: null } });
       return;
     }

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { checkPassword, createSession, currentUser, destroySession, hashPassword, requireAdmin, requireUser } from "@/lib/auth";
-import { CREDENTIALS, FEATURES, deleteCredential, featureEnabled, getSettings, setCredential, type CredentialName } from "@/lib/settings";
+import { CREDENTIALS, FEATURES, PLATFORMS, deleteCredential, featureEnabled, getSettings, isPlatform, setCredential, type CredentialName } from "@/lib/settings";
 import { enqueue } from "@/lib/jobs";
 import { chat } from "@/lib/providers/llm";
 import { accountSnapshot } from "@/lib/providers/tiktok";
@@ -169,10 +169,11 @@ export async function publishClip(fd: FormData) {
   if (episodeId && !(await prisma.episode.findFirst({ where: { id: episodeId, userId: u.id } }))) throw new Error("Vidéo introuvable");
   const when = String(fd.get("scheduledAt") || "");
   const scheduledAt = when ? new Date(when) : null;
-  const platforms = fd.getAll("platform").map(String).filter((p) => p === "tiktok" || p === "facebook");
+  const platforms = fd.getAll("platform").map(String).filter(isPlatform);
   for (const platform of platforms) {
-    if (!(await featureEnabled(platform === "facebook" ? "facebookPublish" : "tiktokPublish"))) continue;
-    const pub = await prisma.publication.create({ data: { userId: u.id, clipId, episodeId, platform, caption: String(fd.get("caption") || ""), privacy: String(fd.get("privacy") || "SELF_ONLY"), scheduledAt } });
+    if (!(await featureEnabled(PLATFORMS[platform].feature))) continue;
+    const privacy = platform === "youtube" ? String(fd.get("ytPrivacy") || "private") : String(fd.get("privacy") || "SELF_ONLY");
+    const pub = await prisma.publication.create({ data: { userId: u.id, clipId, episodeId, platform, caption: String(fd.get("caption") || ""), privacy, scheduledAt } });
     await enqueue("publish", { publicationId: pub.id }, undefined, scheduledAt ?? undefined);
   }
   revalidatePath("/", "layout");
@@ -188,7 +189,7 @@ export async function cancelPublication(id: string) {
 export async function saveAutoPublish(fd: FormData) {
   const u = await requireUser();
   const times = String(fd.get("times") || "").split(/[,\s]+/).filter((t) => /^\d{1,2}:\d{2}$/.test(t)).map((t) => t.padStart(5, "0"));
-  const data = { enabled: fd.get("enabled") === "on", platforms: fd.getAll("platforms").map(String), times, clips: fd.get("clips") === "on", episodes: fd.get("episodes") === "on", privacy: String(fd.get("privacy") || "SELF_ONLY") };
+  const data = { enabled: fd.get("enabled") === "on", platforms: fd.getAll("platforms").map(String).filter(isPlatform), times, clips: fd.get("clips") === "on", episodes: fd.get("episodes") === "on", privacy: String(fd.get("privacy") || "SELF_ONLY"), ytPrivacy: String(fd.get("ytPrivacy") || "private") };
   await prisma.user.update({ where: { id: u.id }, data: { autoPublishJson: JSON.stringify(data) } });
   revalidatePath("/comptes");
 }

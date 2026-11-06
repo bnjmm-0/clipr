@@ -78,6 +78,16 @@ export default async function Settings() {
               <li>Colle l'App ID et l'App secret ci-dessus. La Page publiée est la première Page que tu gères.</li>
             </ol>
           </div>
+          <div className="panel">
+            <h2>Ton projet Google (YouTube)</h2>
+            <ol className="small sec" style={{ paddingLeft: 20, marginTop: 12 }}>
+              <li>Sur console.cloud.google.com, crée un projet avec ton compte Google.</li>
+              <li>Bibliothèque d'API : active YouTube Data API v3. Une clé API de ce projet sert aussi aux Tendances.</li>
+              <li>Écran de consentement OAuth : type Externe, ajoute ton adresse en utilisateur test et les scopes youtube.upload et youtube.readonly.</li>
+              <li>Identifiants : crée un ID client OAuth de type Application Web. URI de redirection : <code>{appUrl}/api/youtube/callback</code></li>
+              <li>Colle le Client ID et le Client secret ci-dessus. Pour publier en public, demande l'audit YouTube API Services ; avant, les vidéos restent privées.</li>
+            </ol>
+          </div>
         </div>
       </div>
 

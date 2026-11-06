@@ -1,12 +1,12 @@
 import { prisma } from "./db";
 import { enqueue } from "./jobs";
-import { featureEnabled } from "./settings";
+import { PLATFORMS, featureEnabled, isPlatform } from "./settings";
 
-export type AutoPublish = { enabled: boolean; platforms: string[]; times: string[]; clips: boolean; episodes: boolean; privacy: string };
+export type AutoPublish = { enabled: boolean; platforms: string[]; times: string[]; clips: boolean; episodes: boolean; privacy: string; ytPrivacy: string };
 
 export function parseAuto(json: string): AutoPublish {
   const a = JSON.parse(json || "{}");
-  return { enabled: !!a.enabled, platforms: a.platforms ?? ["tiktok"], times: (a.times ?? []).filter((t: string) => /^\d{2}:\d{2}$/.test(t)).sort(), clips: !!a.clips, episodes: a.episodes !== false, privacy: a.privacy ?? "SELF_ONLY" };
+  return { enabled: !!a.enabled, platforms: a.platforms ?? ["tiktok"], times: (a.times ?? []).filter((t: string) => /^\d{2}:\d{2}$/.test(t)).sort(), clips: !!a.clips, episodes: a.episodes !== false, privacy: a.privacy ?? "SELF_ONLY", ytPrivacy: a.ytPrivacy ?? "private" };
 }
 
 // Prochain créneau libre (heure locale du serveur) qui n'est pas déjà pris par une publication automatique.
@@ -32,11 +32,11 @@ export async function scheduleAuto(userId: string, item: { clipId?: string; epis
   const created = [];
   for (const platform of a.platforms) {
     if (!u.social.some((s) => s.platform === platform)) continue;
-    if (!(await featureEnabled(platform === "facebook" ? "facebookPublish" : "tiktokPublish"))) continue;
+    if (!isPlatform(platform) || !(await featureEnabled(PLATFORMS[platform].feature))) continue;
     const taken = await prisma.publication.findMany({ where: { userId, platform, auto: true, state: { in: ["scheduled", "sending"] } }, select: { scheduledAt: true } });
     const when = nextSlot(a.times, taken.map((t) => t.scheduledAt!).filter(Boolean));
     if (!when) continue;
-    const pub = await prisma.publication.create({ data: { userId, platform, clipId: item.clipId, episodeId: item.episodeId, caption: item.caption, privacy: a.privacy, auto: true, scheduledAt: when } });
+    const pub = await prisma.publication.create({ data: { userId, platform, clipId: item.clipId, episodeId: item.episodeId, caption: item.caption, privacy: platform === "youtube" ? a.ytPrivacy : a.privacy, auto: true, scheduledAt: when } });
     await enqueue("publish", { publicationId: pub.id }, undefined, when);
     created.push(pub);
   }

@@ -10,7 +10,7 @@ export default function CGU() {
       <h2 style={{ marginTop: 32 }}>Liens YouTube</h2>
       <p className="sec">Le téléchargement depuis YouTube peut aller à l'encontre de ses conditions d'utilisation : l'import de fichier est la voie recommandée.</p>
       <h2 style={{ marginTop: 32 }}>Services tiers et coûts</h2>
-      <p className="sec">Les traitements utilisent des API tierces (transcription, IA, TikTok) avec les clés de l'exploitant ; les coûts correspondants sont facturés par ces fournisseurs.</p>
+      <p className="sec">Les traitements utilisent des API tierces (transcription, IA, TikTok, Meta, YouTube) avec les clés de l'exploitant ; les coûts correspondants sont facturés par ces fournisseurs.</p>
       <h2 style={{ marginTop: 32 }}>Données personnelles</h2>
       <p className="sec">La détection de visage sert uniquement au recadrage : aucune empreinte faciale n'est stockée. Les vidéos sources peuvent être supprimées à tout moment par l'utilisateur.</p>
       <h2 style={{ marginTop: 32 }}>Vidéos reprises</h2>
