@@ -83,7 +83,7 @@ td.r,th.r{text-align:right;font-variant-numeric:tabular-nums}
 
 /* Coque de l'appli : menu latéral */
 .shell{display:grid;grid-template-columns:248px 1fr;min-height:100vh}
-.side{background:var(--bg0);border-right:1px solid var(--line);padding:16px 12px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;overflow-y:auto}
+.side{background:linear-gradient(rgba(15,15,16,.25),rgba(15,15,16,.25)),url(/menu/side.webp) top center/100% auto no-repeat,var(--bg0);border-right:1px solid var(--line);padding:16px 12px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;overflow-y:auto}
 .brand{display:flex;align-items:center;gap:8px;height:32px;padding:0 8px;font-weight:600;font-size:17px;letter-spacing:-.01em}
 .brand .mark{width:20px;height:20px;border-radius:5px;background:var(--accent);display:grid;place-items:center}
 .brand .mark i{display:block;width:8px;height:10px;background:var(--on-accent);clip-path:polygon(0 0,100% 50%,0 100%)}
@@ -200,8 +200,20 @@ footer.site .in{max-width:1200px;margin:0 auto;padding:24px 32px;display:flex;ga
   .hero{grid-template-columns:1fr;min-height:0;padding:48px 0}.hero h1,.hero .h1{font-size:40px}
   .film{height:320vh}.film .beat{padding:0 20px}.film .beat.a{top:16vh}.film .beat.a h1{font-size:40px}.film .beat.a p{font-size:17px;line-height:26px}.film .beat.b h2{font-size:34px}.film .beat.c{top:auto;bottom:12vh}
   .preview{grid-template-columns:1fr;justify-items:center}
-  .shell{grid-template-columns:1fr}.side{position:static;height:auto;flex-direction:row;flex-wrap:wrap;gap:4px;padding:12px}
+  .shell{grid-template-columns:minmax(0,1fr)}
+  /* Écran étroit : barre collante en haut, logo + liens en pastilles qui défilent sur une ligne */
+  .side{position:sticky;top:0;z-index:20;height:auto;flex-direction:row;align-items:center;gap:8px;padding:10px 0 10px 16px;border-right:0;border-bottom:1px solid var(--line);overflow:visible;
+    background:linear-gradient(rgba(15,15,16,.45),rgba(15,15,16,.7)),url(/menu/top.webp) center/cover,var(--bg0);backdrop-filter:blur(10px)}
+  .side{min-width:0}.brand{flex:none}
+  .sidenav{display:flex;gap:6px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none;padding:2px 24px 2px 8px;mask-image:linear-gradient(90deg,transparent 0,#000 12px,#000 calc(100% - 28px),transparent)}
+  .sidenav::-webkit-scrollbar{display:none}
+  .navgrp{display:contents}
   .side .navsec,.side .foot{display:none}.navlink.on::before{display:none}
+  .navlink{flex:none;height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:rgba(20,20,21,.55)}
+  .navlink+.navlink{margin-top:0}
+  .navlink:hover{background:rgba(35,35,37,.8);border-color:var(--line2)}
+  .navlink.on{background:rgba(245,217,10,.12);border-color:rgba(245,217,10,.5);box-shadow:0 0 18px rgba(245,217,10,.12)}
+  .navlink.on svg{color:var(--accent)}
   .page{padding:20px}.wrap,.topnav .in{padding:0 20px}
   .topnav a.l{display:none}
   .page .grid{grid-template-columns:1fr!important}
@@ -396,3 +408,13 @@ footer.site .in{max-width:1200px;margin:0 auto;padding:24px 32px;display:flex;ga
 @media (max-width:1000px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.vrow{grid-template-columns:96px minmax(0,1fr) 64px 56px 64px}.vrow>span:nth-child(5),.vrow>span:nth-child(6){display:none}.crow{grid-template-columns:minmax(0,1.4fr) repeat(2,minmax(0,1fr))}.crow>span:nth-child(4),.crow>span:nth-child(5){display:none}}
 @media (max-width:520px){.kpi .v{font-size:26px}.vrow{grid-template-columns:80px minmax(0,1fr) 56px}.vrow>span:nth-child(n+4){display:none}}
 .barpeak{font-size:12px;line-height:14px;color:var(--text);white-space:nowrap;animation:pagein .5s var(--ease) .5s both}
+/* Menu : logo qui s'illumine au survol, onglet actif mis en valeur sur grand écran */
+.brand .mark{transition:box-shadow .3s var(--ease),transform .3s var(--ease)}
+.brand:hover .mark{box-shadow:0 0 16px rgba(245,217,10,.45);transform:rotate(-6deg)}
+@media (min-width:1001px){.navlink.on{background:linear-gradient(90deg,rgba(245,217,10,.1),rgba(35,35,37,.9) 60%)}.navlink.on svg{color:var(--accent)}}
+
+/* Fond de toute l'app : rubans dorés (Magnific, public/menu/) fixés derrière le contenu, assombris pour la lisibilité */
+.shell{position:relative;isolation:isolate}
+.shell::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(120% 80% at 70% 0%,rgba(15,15,16,.15),rgba(15,15,16,.75) 70%),url(/menu/top.webp) center top/cover no-repeat,var(--bg)}
+@media (min-width:1001px){.side{background:url(/menu/side.webp) top center/100% auto no-repeat,rgba(12,12,13,.72);backdrop-filter:blur(6px)}}
