@@ -3,6 +3,11 @@ import { currentUser } from "@/lib/auth";
 import ClipPreview from "@/components/ClipPreview";
 import Icon from "@/components/Icon";
 import OpeningFilm from "@/components/OpeningFilm";
+import ScrollIntro from "@/components/ScrollIntro";
+
+// Une seule ouverture active à la fois : false = film en images (OpeningFilm),
+// true = vidéo Magnific pilotée par le scroll (ScrollIntro, /intro.mp4).
+const OUVERTURE_MAGNIFIC = false;
 
 const FEATURES = [
   { icon: "clips", t: "Clips depuis une vidéo longue", d: "Transcription mot à mot, chaque passage noté sur 100, recadrage 9:16 qui suit la personne qui parle." },
@@ -17,7 +22,9 @@ export default async function Home() {
   const u = await currentUser();
   return (
     <>
-    <OpeningFilm cta={u ? "/tableau-de-bord" : "/inscription"} label={u ? "Ouvrir l'appli" : "Essai gratuit"} />
+    {OUVERTURE_MAGNIFIC
+      ? <ScrollIntro />
+      : <OpeningFilm cta={u ? "/tableau-de-bord" : "/inscription"} label={u ? "Ouvrir l'appli" : "Essai gratuit"} />}
     <main className="wrap">
       <section className="hero" id="produit">
         <div className="enter">
