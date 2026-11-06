@@ -8,6 +8,7 @@ import { CREDENTIALS, FEATURES, deleteCredential, featureEnabled, getSettings, s
 import { enqueue } from "@/lib/jobs";
 import { chat } from "@/lib/providers/llm";
 import { accountSnapshot } from "@/lib/providers/tiktok";
+import { CREATORS } from "@/lib/ai-advice";
 
 export type FormState = { error?: string; ok?: string } | undefined;
 
@@ -68,6 +69,7 @@ export async function saveCredential(_: FormState, fd: FormData): Promise<FormSt
   if (value.length < 8) return { error: "Clé trop courte" };
   await setCredential(name, value);
   revalidatePath("/reglages");
+  revalidatePath("/conseils-ia/creer");
   return { ok: "Clé enregistrée (chiffrée)" };
 }
 
@@ -325,6 +327,37 @@ export async function createGeneration(fd: FormData) {
   const g = await prisma.generation.create({ data: { userId: u.id, kind, prompt } });
   await enqueue("generate", { generationId: g.id });
   revalidatePath("/generer");
+}
+
+// « Créer avec l'IA » depuis Conseils IA : l'idée + les options du projet donnent le prompt.
+export async function createFromAdvice(fd: FormData) {
+  const u = await requireUser();
+  const c = CREATORS[String(fd.get("projet"))];
+  if (!c) return;
+  const kind = c.video && fd.get("kind") === "video" ? "video" : "image";
+  if (!(await featureEnabled(kind === "video" ? "textToVideo" : "textToImage"))) throw new Error("Fonction désactivée");
+  const idea = String(fd.get("idea") || "").trim().slice(0, 1000);
+  if (!idea) return;
+  const opts = Object.fromEntries(c.fields.map((f) => {
+    const v = String(fd.get(f.name) || "");
+    return [f.name, f.choices.includes(v) ? v : f.choices[0]];
+  }));
+  const prompt = c.build(idea, opts).slice(0, 2000);
+  const n = kind === "video" ? 1 : Math.min(4, Math.max(1, Number(fd.get("count")) || 1));
+  for (let i = 0; i < n; i++) {
+    const g = await prisma.generation.create({ data: { userId: u.id, kind, prompt } });
+    await enqueue("generate", { generationId: g.id });
+  }
+  revalidatePath("/conseils-ia/creer");
+  revalidatePath("/generer");
+}
+
+// Active « Texte → image » sans passer par Réglages (bouton de la page Créer avec l'IA).
+export async function enableImageGeneration() {
+  await requireAdmin();
+  const s = await getSettings();
+  await prisma.appSettings.update({ where: { id: "global" }, data: { featuresJson: JSON.stringify({ ...s.features, textToImage: true }) } });
+  revalidatePath("/", "layout");
 }
 
 // ——— Coach TikTok ———

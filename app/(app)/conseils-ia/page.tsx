@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { FEATURES, getSettings } from "@/lib/settings";
-import { ADVICE_DATE, PROJECTS, TOOLBOX, type AiTool } from "@/lib/ai-advice";
+import { ADVICE_DATE, CREATORS, PROJECTS, TOOLBOX, type AiTool } from "@/lib/ai-advice";
 
 const ToolName = ({ tool }: { tool: AiTool }) => <a href={tool.url} target="_blank" rel="noreferrer" style={{ textDecoration: "underline", textUnderlineOffset: 3 }}>{tool.name}</a>;
 
@@ -24,7 +24,10 @@ export default async function AiAdvice({ searchParams }: { searchParams: Promise
 
       <div className="stack-24">
         <div className="panel stack">
-          <h2>{p.title}</h2>
+          <div className="row" style={{ justifyContent: "space-between", gap: 12 }}>
+            <h2>{p.title}</h2>
+            {CREATORS[p.id] && <Link href={`/conseils-ia/creer?projet=${p.id}`} className="btn accent sm">Créer avec l'IA</Link>}
+          </div>
           <p className="sec">{p.pitch}</p>
           {showClipr && (
             <div className="note row" style={{ gap: 16, alignItems: "center", flexWrap: "wrap" }}>

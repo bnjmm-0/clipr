@@ -118,3 +118,73 @@ export const TOOLBOX: { need: string; pick: AiTool; alt: AiTool }[] = [
   { need: "Musique", pick: t("suno", ""), alt: t("elevenlabs", "") },
   { need: "Montage et sous-titres", pick: t("capcut", ""), alt: t("submagic", "") },
 ];
+
+// « Créer avec l'IA » : page prompt par projet. L'idée libre + les options choisies donnent le prompt
+// envoyé à la génération d'images (ou de vidéo) de Clipr. La première valeur de chaque option est celle par défaut.
+export type CreatorField = { name: string; label: string; choices: string[] };
+export type Creator = {
+  title: string;
+  intro: string;
+  placeholder: string;
+  video: boolean; // la vidéo a un sens pour ce projet (si un modèle vidéo est configuré)
+  fields: CreatorField[];
+  build: (idea: string, o: Record<string, string>) => string;
+};
+
+export const CREATORS: Record<string, Creator> = {
+  "fruit-ia": {
+    title: "Créer une scène de Fruits IA",
+    intro: "Décris la scène de ton épisode : qui parle, ce qui se passe, le rebondissement.",
+    placeholder: "La fraise découvre que la banane l'a trompée avec l'ananas, au bord de la piscine",
+    video: true,
+    fields: [
+      { name: "perso", label: "Personnage principal", choices: ["Fraise", "Banane", "Ananas", "Pastèque", "Avocat", "Citron", "Pêche", "Raisin"] },
+      { name: "emotion", label: "Émotion", choices: ["choqué", "amoureux", "en colère", "triste", "joyeux", "jaloux"] },
+      { name: "style", label: "Style", choices: ["3D façon film d'animation", "réaliste", "pâte à modeler", "dessin animé 2D"] },
+      { name: "decor", label: "Décor", choices: ["villa au bord de la piscine", "cuisine", "plage", "intérieur d'un frigo", "marché", "salle de classe"] },
+      { name: "plan", label: "Cadrage", choices: ["gros plan sur le visage", "plan moyen", "plan large"] },
+      { name: "lumiere", label: "Lumière", choices: ["soleil doré", "néons de nuit", "lumière douce de studio"] },
+    ],
+    build: (idea, o) => `Style ${o.style}. Personnage : ${o.perso} personnifié avec un visage expressif (grands yeux, bouche, sourcils), émotion : ${o.emotion}. Décor : ${o.decor}. Cadrage : ${o.plan}. Lumière : ${o.lumiere}. Scène : ${idea}. Image verticale, rendu net et coloré, aucun texte.`,
+  },
+  "influenceur-ia": {
+    title: "Créer une photo d'influenceur IA",
+    intro: "Décris ton personnage et la photo que tu veux pour son prochain post.",
+    placeholder: "Léa, 25 ans, cheveux bruns bouclés, taches de rousseur, boit un café en terrasse",
+    video: true,
+    fields: [
+      { name: "type", label: "Type de photo", choices: ["selfie au smartphone", "photo lifestyle", "portrait studio", "photo en mouvement"] },
+      { name: "lieu", label: "Lieu", choices: ["café en terrasse", "salle de sport", "plage", "appartement lumineux", "rue de nuit", "montagne"] },
+      { name: "tenue", label: "Tenue", choices: ["décontractée", "streetwear", "élégante", "sport"] },
+      { name: "moment", label: "Moment", choices: ["golden hour", "matin", "soirée"] },
+      { name: "plan", label: "Cadrage", choices: ["portrait serré", "mi-corps", "en pied"] },
+    ],
+    build: (idea, o) => `Photo réaliste pour les réseaux sociaux, ${o.type}. Personnage fictif : ${idea}. Lieu : ${o.lieu}. Tenue ${o.tenue}. Moment : ${o.moment}. Cadrage : ${o.plan}. Peau et lumière naturelles, image verticale, aucun texte, ne ressemble à aucune personne réelle.`,
+  },
+  clips: {
+    title: "Créer une miniature de clip",
+    intro: "Décris le sujet de ton clip : la miniature doit donner envie de cliquer.",
+    placeholder: "Un podcasteur choqué par une révélation sur l'argent",
+    video: false,
+    fields: [
+      { name: "expr", label: "Expression", choices: ["choqué", "souriant", "sérieux", "en train de rire"] },
+      { name: "fond", label: "Fond", choices: ["couleur unie vive", "flou de studio", "décor lié au sujet"] },
+      { name: "couleur", label: "Couleur dominante", choices: ["jaune", "rouge", "bleu", "vert"] },
+      { name: "style", label: "Style", choices: ["photo réaliste", "illustration"] },
+    ],
+    build: (idea, o) => `Miniature verticale accrocheuse pour une vidéo courte, ${o.style}. Sujet : ${idea}. Personne au premier plan avec une expression ${o.expr}, fond : ${o.fond}, couleur dominante ${o.couleur}, fort contraste, composition simple. Aucun texte.`,
+  },
+  faceless: {
+    title: "Créer une image de vidéo sans visage",
+    intro: "Décris la scène à illustrer (une image par scène de ton histoire).",
+    placeholder: "Un phare isolé dans la tempête, une silhouette en haut de l'escalier",
+    video: true,
+    fields: [
+      { name: "ambiance", label: "Ambiance", choices: ["mystère", "horreur", "motivation", "histoire vraie", "science", "aventure"] },
+      { name: "style", label: "Style visuel", choices: ["cinématique réaliste", "illustration", "peinture numérique", "anime"] },
+      { name: "palette", label: "Couleurs", choices: ["sombres", "chaudes", "froides", "pastel"] },
+      { name: "plan", label: "Cadrage", choices: ["plan large", "plan moyen", "gros plan"] },
+    ],
+    build: (idea, o) => `Image ${o.style} pour une vidéo racontée, ambiance ${o.ambiance}. Scène : ${idea}. Couleurs ${o.palette}, ${o.plan}, éclairage dramatique. Image verticale, aucun texte, aucun visage reconnaissable.`,
+  },
+};
