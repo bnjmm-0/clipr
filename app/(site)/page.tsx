@@ -2,6 +2,7 @@ import Link from "next/link";
 import { currentUser } from "@/lib/auth";
 import ClipPreview from "@/components/ClipPreview";
 import Icon from "@/components/Icon";
+import OpeningFilm from "@/components/OpeningFilm";
 
 const FEATURES = [
   { icon: "clips", t: "Clips depuis une vidéo longue", d: "Transcription mot à mot, chaque passage noté sur 100, recadrage 9:16 qui suit la personne qui parle." },
@@ -15,10 +16,12 @@ const FEATURES = [
 export default async function Home() {
   const u = await currentUser();
   return (
+    <>
+    <OpeningFilm cta={u ? "/tableau-de-bord" : "/inscription"} label={u ? "Ouvrir l'appli" : "Essai gratuit"} />
     <main className="wrap">
-      <section className="hero">
+      <section className="hero" id="produit">
         <div className="enter">
-          <h1>Tes vidéos longues deviennent des clips qui <span className="word">accrochent</span></h1>
+          <h2 className="h1">Tes vidéos longues deviennent des clips qui <span className="word">accrochent</span></h2>
           <p className="sub">Clipr trouve les meilleurs passages d'un podcast ou d'un live, les recadre en vertical avec des sous-titres animés, et les publie sur TikTok et Facebook.</p>
           <form action={u ? "/tableau-de-bord" : "/inscription"} className="paste">
             <input name="url" aria-label="Lien de la vidéo" placeholder="Colle le lien d'une vidéo" />
@@ -38,5 +41,6 @@ export default async function Home() {
         ))}
       </section>
     </main>
+    </>
   );
 }
