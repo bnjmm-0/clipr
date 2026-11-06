@@ -8,7 +8,7 @@ const ROWS: [string, string, string][] = [
   ["Personnage IA réutilisé d'un épisode à l'autre", "Oui, avec la mémoire de la série", "À redécrire à chaque fois"],
   ["Durée d'une vidéo IA", "Réglable de 15 s à 10 min", "Souvent des plans de quelques secondes"],
   ["Sous-titres animés mot à mot", "4 styles, mot prononcé surligné", "À monter à la main"],
-  ["Publication TikTok et Facebook", "Directe, planifiée ou automatique", "Un outil de planification en plus"],
+  ["Publication TikTok, Facebook et YouTube", "Directe, planifiée ou automatique", "Un outil de planification en plus"],
   ["Miniature", "Générée à la fin du rendu", "À faire dans un éditeur d'image"],
   ["Idées de vidéos", "Mises à jour toutes les 6 h", "Veille manuelle"],
 ];
@@ -30,7 +30,7 @@ export default function Pourquoi() {
     <main className="wrap">
       <section style={{ padding: "96px 0 64px", maxWidth: 760 }} className="enter">
         <h1 style={{ fontSize: 56, lineHeight: 1.05, letterSpacing: "-.03em" }}>Un seul outil pour trouver l'idée, faire la vidéo et la <span className="word">publier</span></h1>
-        <p className="sec" style={{ fontSize: 19, lineHeight: "29px", marginTop: 20, maxWidth: "34rem" }}>Clips depuis tes vidéos longues, séries IA avec tes personnages, tendances du moment et publication sur TikTok et Facebook.</p>
+        <p className="sec" style={{ fontSize: 19, lineHeight: "29px", marginTop: 20, maxWidth: "34rem" }}>Clips depuis tes vidéos longues, séries IA avec tes personnages, tendances du moment et publication sur TikTok, Facebook et YouTube.</p>
         <div className="row" style={{ marginTop: 32 }}><Link href="/inscription" className="btn accent lg">Essayer gratuitement</Link><Link href="/tendances" className="btn ghost lg">Voir les tendances</Link></div>
       </section>
 

@@ -19,3 +19,21 @@ test("vidéos IA : nombre de scènes et minutage des mots", async () => {
   assert.ok(w[0].s === 10 && w.at(-1)!.e <= 13);
   for (let i = 1; i < w.length; i++) assert.ok(w[i].s >= w[i - 1].e);
 });
+
+test("YouTube : titre et description de Short, visibilité", async () => {
+  const { shortMeta, ytPrivacy, quotaDayStart } = await import("../lib/providers/youtube");
+  const m = shortMeta("Le meilleur passage <du> podcast\nDeuxième ligne");
+  assert.equal(m.title, "Le meilleur passage du podcast #Shorts");
+  assert.match(m.description, /Deuxième ligne\n\n#Shorts$/);
+  const long = shortMeta("x".repeat(300));
+  assert.ok(long.title.length <= 100 && long.title.endsWith("#Shorts"));
+  assert.equal(shortMeta("Déjà tagué #shorts").title, "Déjà tagué #shorts");
+  assert.equal(ytPrivacy("PUBLIC_TO_EVERYONE"), "public");
+  assert.equal(ytPrivacy("MUTUAL_FOLLOW_FRIENDS"), "unlisted");
+  assert.equal(ytPrivacy("SELF_ONLY"), "private");
+  assert.equal(ytPrivacy(undefined), "private");
+  const now = new Date("2026-11-06T12:00:00Z");
+  const d = quotaDayStart(now);
+  assert.ok(d <= now && now.getTime() - d.getTime() < 864e5);
+  assert.equal(d.toLocaleString("en-US", { timeZone: "America/Los_Angeles", hour: "numeric", hourCycle: "h23" }), "00");
+});

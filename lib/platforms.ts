@@ -7,5 +7,7 @@ export async function publishTargets(userId: string) {
   if (acc.some((a) => a.platform === "tiktok") && (await featureEnabled("tiktokPublish"))) out.push({ id: "tiktok", label: "TikTok" });
   const fb = acc.find((a) => a.platform === "facebook");
   if (fb && (await featureEnabled("facebookPublish"))) out.push({ id: "facebook", label: `Facebook · ${fb.displayName ?? "Page"}` });
+  const yt = acc.find((a) => a.platform === "youtube");
+  if (yt && (await featureEnabled("youtubePublish"))) out.push({ id: "youtube", label: `YouTube · ${yt.displayName ?? "Chaîne"}` });
   return out;
 }

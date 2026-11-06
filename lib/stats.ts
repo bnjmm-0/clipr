@@ -1,6 +1,7 @@
 import { prisma } from "./db";
 import { accountSnapshot } from "./providers/tiktok";
 import { fbSnapshot } from "./providers/facebook";
+import { ytSnapshot } from "./providers/youtube";
 
 // Relevé des statistiques de tous les comptes connectés d'un utilisateur (toutes les 6 h par le worker).
 export async function snapshotUser(userId: string) {
@@ -15,6 +16,9 @@ export async function snapshotUser(userId: string) {
       } else if (a.platform === "facebook") {
         const s = await fbSnapshot(userId);
         await prisma.accountSnapshot.create({ data: { userId, platform: "facebook", followers: s.followers, likes: s.likes, videos: s.videos, views: s.views, topJson: JSON.stringify(s.top) } });
+      } else if (a.platform === "youtube") {
+        const s = await ytSnapshot(userId);
+        await prisma.accountSnapshot.create({ data: { userId, platform: "youtube", followers: s.followers, likes: s.likes, videos: s.videos, views: s.views, topJson: JSON.stringify(s.top) } });
       }
     } catch (e) { errors.push(`${a.platform} : ${(e as Error).message}`); }
   }

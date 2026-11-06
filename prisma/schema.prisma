@@ -253,7 +253,7 @@ model UsageEvent {
   userId    String?
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   provider  String
-  kind      String   // llm | transcription | image | video | tiktok
+  kind      String   // llm | transcription | image | video | tiktok | publication | quota
   model     String?
   units     Float    // tokens, minutes, images, secondes…
   unitLabel String
@@ -275,8 +275,8 @@ model SocialAccount {
   id           String   @id @default(cuid())
   userId       String
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  platform     String   // tiktok | facebook
-  openId       String   // TikTok : open_id ; Facebook : id de la Page
+  platform     String   // tiktok | facebook | youtube
+  openId       String   // TikTok : open_id ; Facebook : id de la Page ; YouTube : id de la chaîne
   displayName  String?
   avatarUrl    String?
   accessEnc    String   // jeton chiffré (JSON {c,iv,tag})
@@ -294,7 +294,7 @@ model Publication {
   clip        Clip?    @relation(fields: [clipId], references: [id], onDelete: Cascade)
   episodeId   String?
   episode     Episode? @relation(fields: [episodeId], references: [id], onDelete: Cascade)
-  platform    String   // tiktok | facebook
+  platform    String   // tiktok | facebook | youtube
   caption     String?
   privacy     String   @default("SELF_ONLY")
   auto        Boolean  @default(false) // créée par la publication automatique

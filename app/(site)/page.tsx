@@ -14,7 +14,7 @@ const FEATURES = [
   { icon: "film", t: "Séries vidéo IA", d: "Un personnage, une idée de série, et chaque épisode est écrit, doublé, illustré et enregistré. Jusqu'à 10 minutes." },
   { icon: "copy", t: "Reprendre une vidéo", d: "Clipr analyse la structure d'une vidéo qui marche et écrit une version originale avec ton personnage." },
   { icon: "trend", t: "Tendances toutes les 6 h", d: "Les vidéos qui montent sur YouTube France, les recherches en hausse et des idées prêtes à produire." },
-  { icon: "send", t: "TikTok et Facebook", d: "Publication directe, planifiée ou automatique sur tes créneaux, avec la miniature générée." },
+  { icon: "send", t: "TikTok, Facebook et YouTube", d: "Publication directe, planifiée ou automatique sur tes créneaux, avec la miniature générée." },
   { icon: "chart", t: "Statistiques des comptes", d: "Abonnés, vues et meilleures vidéos, relevés toutes les 6 h pour suivre la courbe." },
 ];
 
@@ -29,7 +29,7 @@ export default async function Home() {
       <section className="hero" id="produit">
         <div className="enter">
           <h2 className="h1">Tes vidéos longues deviennent des clips qui <span className="word">accrochent</span></h2>
-          <p className="sub">Clipr trouve les meilleurs passages d'un podcast ou d'un live, les recadre en vertical avec des sous-titres animés, et les publie sur TikTok et Facebook.</p>
+          <p className="sub">Clipr trouve les meilleurs passages d'un podcast ou d'un live, les recadre en vertical avec des sous-titres animés, et les publie sur TikTok, Facebook et YouTube Shorts.</p>
           <form action={u ? "/tableau-de-bord" : "/inscription"} className="paste">
             <input name="url" aria-label="Lien de la vidéo" placeholder="Colle le lien d'une vidéo" />
             <button className="btn accent">Créer mes clips</button>

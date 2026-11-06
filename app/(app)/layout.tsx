@@ -19,7 +19,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const grow = [
     f.trends && { href: "/tendances-du-moment", label: "Tendances", icon: "trend" },
     f.stats && { href: "/statistiques", label: "Statistiques", icon: "chart" },
-    (f.tiktokPublish || f.facebookPublish) && { href: "/comptes", label: "Comptes et publication", icon: "send" },
+    (f.tiktokPublish || f.facebookPublish || f.youtubePublish) && { href: "/comptes", label: "Comptes et publication", icon: "send" },
     f.tiktokCoach && { href: "/coach", label: "Coach TikTok", icon: "message" },
   ].filter(Boolean) as { href: string; label: string; icon: string }[];
   const admin = [

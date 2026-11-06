@@ -1,3 +1,4 @@
+import { platformLabel } from "@/lib/settings";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
@@ -63,7 +64,7 @@ export default async function EpisodePage({ params }: { params: Promise<{ id: st
             )}
           </div>
           {e.publications.length > 0 && <div className="panel" style={{ padding: "8px 24px" }}><table><thead><tr><th>Plateforme</th><th>Prévue</th><th>État</th></tr></thead><tbody>
-            {e.publications.map((p) => <tr key={p.id}><td>{p.platform === "facebook" ? "Facebook" : "TikTok"}{p.auto ? " · auto" : ""}</td><td className="num">{p.scheduledAt?.toLocaleString("fr-FR") ?? "immédiate"}</td><td>{p.state}{p.error ? ` · ${p.error}` : ""}</td></tr>)}
+            {e.publications.map((p) => <tr key={p.id}><td>{platformLabel(p.platform)}{p.auto ? " · auto" : ""}</td><td className="num">{p.scheduledAt?.toLocaleString("fr-FR") ?? "immédiate"}</td><td>{p.state}{p.error ? ` · ${p.error}` : ""}</td></tr>)}
           </tbody></table></div>}
         </div>
       </div>
