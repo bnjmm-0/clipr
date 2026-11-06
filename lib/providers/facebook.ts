@@ -1,3 +1,4 @@
+import type { StatVideo } from "../analytics";
 import fs from "node:fs";
 import { prisma } from "../db";
 import { openJson, sealJson } from "../crypto";
@@ -64,12 +65,20 @@ export async function fbPublishReel(userId: string, file: string, description: s
 export async function fbSnapshot(userId: string) {
   const p = await page(userId);
   const info = await gget(`/${p.id}`, { fields: "followers_count,fan_count,name", access_token: p.token });
-  const reels = await gget(`/${p.id}/video_reels`, { fields: "id,description,created_time,length", limit: "20", access_token: p.token }).catch(() => ({ data: [] }));
-  const vids: { title: string; views: number; likes: number; date: string }[] = [];
+  const reels = await gget(`/${p.id}/video_reels`, { fields: "id,description,created_time,length,permalink_url,picture", limit: "20", access_token: p.token }).catch(() => ({ data: [] }));
+  const vids: StatVideo[] = [];
   for (const v of reels.data ?? []) {
     const ins = await gget(`/${v.id}/video_insights`, { access_token: p.token }).catch(() => ({ data: [] }));
-    const metric = (n: string) => Number((ins.data ?? []).find((m: { name: string }) => m.name === n)?.values?.[0]?.value ?? 0);
-    vids.push({ title: v.description ?? "", views: metric("blue_reels_play_count") || metric("fb_reels_total_plays"), likes: metric("post_video_likes_by_reaction_type") || 0, date: v.created_time });
+    // Une mesure vaut soit un nombre, soit un détail par type ({ REACTION_LIKE: 3, … } ou { COMMENT: 2, SHARE: 1 }).
+    const raw = (n: string) => (ins.data ?? []).find((m: { name: string }) => m.name === n)?.values?.[0]?.value;
+    const num = (n: string) => { const x = raw(n); return typeof x === "object" && x ? Object.values(x as Record<string, number>).reduce((a, b) => a + Number(b || 0), 0) : Number(x ?? 0); };
+    const part = (n: string, re: RegExp) => { const x = raw(n); return typeof x === "object" && x ? Object.entries(x as Record<string, number>).filter(([k]) => re.test(k)).reduce((a, [, b]) => a + Number(b || 0), 0) : 0; };
+    vids.push({
+      id: v.id, title: v.description ?? "", date: v.created_time, duration: Number(v.length ?? 0), cover: v.picture ?? "", url: v.permalink_url ? (String(v.permalink_url).startsWith("http") ? v.permalink_url : `https://www.facebook.com${v.permalink_url}`) : "",
+      views: num("blue_reels_play_count") || num("fb_reels_total_plays") || num("post_video_views"),
+      likes: num("post_video_likes_by_reaction_type"),
+      comments: part("post_video_social_actions", /comment/i), shares: part("post_video_social_actions", /share/i),
+    });
   }
-  return { followers: Number(info.followers_count ?? info.fan_count ?? 0), likes: 0, videos: vids.length, views: vids.reduce((a, v) => a + v.views, 0), top: vids.sort((a, b) => b.views - a.views).slice(0, 10) };
+  return { followers: Number(info.followers_count ?? info.fan_count ?? 0), likes: vids.reduce((a, v) => a + v.likes, 0), videos: vids.length, views: vids.reduce((a, v) => a + v.views, 0), top: vids };
 }

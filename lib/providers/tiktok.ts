@@ -69,8 +69,8 @@ export async function tiktokApi(userId: string, pathAndQuery: string, body?: unk
 }
 
 export async function accountSnapshot(userId: string) {
-  const info = await tiktokApi(userId, "/v2/user/info/?fields=display_name,follower_count,following_count,likes_count,video_count,bio_description");
-  const vids = await tiktokApi(userId, "/v2/video/list/?fields=id,title,video_description,duration,create_time,view_count,like_count,comment_count,share_count", { max_count: 20 });
+  const info = await tiktokApi(userId, "/v2/user/info/?fields=display_name,avatar_url,follower_count,following_count,likes_count,video_count,bio_description");
+  const vids = await tiktokApi(userId, "/v2/video/list/?fields=id,title,video_description,duration,create_time,cover_image_url,share_url,view_count,like_count,comment_count,share_count", { max_count: 20 });
   return { user: info.data?.user, videos: vids.data?.videos ?? [] };
 }
 

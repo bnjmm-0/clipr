@@ -119,7 +119,11 @@ export async function ytSnapshot(userId: string) {
   const list = uploads ? await call(userId, t, "/playlistItems", { part: "contentDetails", playlistId: uploads, maxResults: "20" }).catch(() => ({ items: [] })) : { items: [] };
   const ids = (list.items ?? []).map((i: { contentDetails: { videoId: string } }) => i.contentDetails.videoId).join(",");
   const vids = ids ? await call(userId, t, "/videos", { part: "snippet,statistics", id: ids }) : { items: [] };
-  const top = (vids.items ?? []).map((v: Record<string, any>) => ({ title: v.snippet?.title ?? "", views: Number(v.statistics?.viewCount ?? 0), likes: Number(v.statistics?.likeCount ?? 0), date: v.snippet?.publishedAt ?? "" }));
+  const top = (vids.items ?? []).map((v: Record<string, any>) => ({
+    id: v.id, title: v.snippet?.title ?? "", views: Number(v.statistics?.viewCount ?? 0), likes: Number(v.statistics?.likeCount ?? 0),
+    comments: Number(v.statistics?.commentCount ?? 0), date: v.snippet?.publishedAt ?? "",
+    cover: v.snippet?.thumbnails?.medium?.url ?? "", url: v.id ? `https://youtu.be/${v.id}` : "",
+  }));
   return {
     followers: Number(c.statistics?.subscriberCount ?? 0), videos: Number(c.statistics?.videoCount ?? 0),
     likes: top.reduce((a: number, v: { likes: number }) => a + v.likes, 0), views: top.reduce((a: number, v: { views: number }) => a + v.views, 0),
