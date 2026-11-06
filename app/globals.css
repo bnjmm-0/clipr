@@ -169,9 +169,19 @@ footer.site .in{max-width:1200px;margin:0 auto;padding:24px 32px;display:flex;ga
 .stat .d{font-size:13px;color:var(--text2);margin-top:8px}
 .drop{border:1px dashed var(--line2);border-radius:12px;padding:24px;text-align:center;cursor:pointer;transition:border-color .15s var(--ease),background-color .15s var(--ease)}
 .drop:hover,.drop.over{border-color:var(--accent);background:rgba(245,217,10,.04)}
-.rank{display:grid;grid-template-columns:28px 120px 1fr auto;gap:16px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+/* Classement des tendances : une ligne par vidéo (rang, vignette, titre, vues/heure, Clipper) */
+.rank{display:grid;grid-template-columns:32px 168px minmax(0,1fr) 200px auto;grid-template-areas:"n thumb info rate cta";column-gap:20px;row-gap:8px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
 .rank:last-child{border-bottom:0}
-.rank img{width:120px;aspect-ratio:16/9;object-fit:cover;border-radius:8px;background:var(--raised)}
+.rank .n{grid-area:n;text-align:center;font-size:15px}
+.rank .thumb{grid-area:thumb;position:relative;display:block;border-radius:8px;overflow:hidden;background:var(--raised)}
+.rank .thumb img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block}
+.rank .thumb .d{position:absolute;right:6px;bottom:6px;padding:0 5px;border-radius:4px;background:rgba(0,0,0,.8);font-size:11px;line-height:18px;font-weight:500}
+.rank .info{grid-area:info;min-width:0}
+.rank .info .t{font-weight:500;line-height:20px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rank .rate{grid-area:rate}
+.rank .rate .v{font-size:14px;line-height:20px;font-weight:500;white-space:nowrap}
+.rank .rate .growth{max-width:none}
+.rank .cta{grid-area:cta}
 .growth{height:4px;border-radius:2px;background:var(--raised);margin-top:8px;max-width:240px}
 .growth i{display:block;height:100%;border-radius:2px;background:var(--text2)}
 .growth.top i{background:var(--accent)}
@@ -194,8 +204,10 @@ footer.site .in{max-width:1200px;margin:0 auto;padding:24px 32px;display:flex;ga
   .page{padding:20px}.wrap,.topnav .in{padding:0 20px}
   .topnav a.l{display:none}
   .page .grid{grid-template-columns:1fr!important}
-  .rank{grid-template-columns:24px 1fr auto}.rank img{display:none}
+  .rank{grid-template-columns:24px 120px minmax(0,1fr) auto;grid-template-areas:"n thumb info info" "n thumb rate cta";column-gap:12px}
 }
+@media (max-width:640px){.trendtop{grid-template-columns:1fr!important;gap:16px!important}}
+@media (max-width:520px){.rank{grid-template-columns:20px 96px minmax(0,1fr) auto;grid-template-areas:"n thumb info info" "n rate rate cta"}.rank .info .t{font-size:13px;line-height:18px}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
 /* Ouverture pilotée par le scroll */

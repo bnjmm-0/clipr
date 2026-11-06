@@ -19,7 +19,7 @@ export default function TrendsView({ t, app }: { t: { createdAt: Date; region: s
       {t.error && app && <p className="alert">{t.error}</p>}
 
       {top && (
-        <div className="panel" style={{ display: "grid", gridTemplateColumns: "minmax(0,1.2fr) minmax(0,1fr)", gap: 24, alignItems: "center" }}>
+        <div className="panel trendtop" style={{ display: "grid", gridTemplateColumns: "minmax(0,1.2fr) minmax(0,1fr)", gap: 24, alignItems: "center" }}>
           <a href={top.url} target="_blank" rel="noreferrer"><img src={top.thumb} alt="" style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", borderRadius: 10 }} /></a>
           <div className="stack">
             <span className="tag"><span className="dot live" />N° 1 en ce moment{top.category ? ` · ${top.category}` : ""}</span>
@@ -35,29 +35,30 @@ export default function TrendsView({ t, app }: { t: { createdAt: Date; region: s
         </div>
       )}
 
-      <div className="grid" style={{ gridTemplateColumns: "minmax(0,1.6fr) minmax(0,1fr)", gap: 24, alignItems: "start" }}>
-        <div className="panel" style={{ padding: "8px 24px" }}>
-          <h2 style={{ padding: "16px 0 8px" }}>Ça monte en ce moment</h2>
-          {rest.length === 0 && <p className="sec small" style={{ paddingBottom: 16 }}>Classement indisponible sans clé YouTube.</p>}
-          {rest.map((v, i) => (
-            <div key={v.id} className="rank">
-              <span className="muted num">{i + 2}</span>
-              <a href={v.url} target="_blank" rel="noreferrer"><img src={v.thumb} alt="" /></a>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v.title}</div>
-                <div className="xs muted num">{v.channel} · {dur(v.durationSec)} · {k(v.views)} vues{v.category ? ` · ${v.category}` : ""}</div>
-                <div className={`growth ${i === 0 ? "top" : ""}`}><i style={{ width: `${(rate(v) / max) * 100}%` }} /></div>
-              </div>
-              <div style={{ textAlign: "right" }}>
-                <div className="num small">+{k(rate(v))}/h</div>
-                <Link href={go(`/tableau-de-bord?url=${encodeURIComponent(v.url)}`)} className="btn ghost sm" style={{ marginTop: 8 }}>Clipper</Link>
-              </div>
+      <div className="panel" style={{ padding: "8px 24px" }}>
+        <h2 style={{ padding: "16px 0 8px" }}>Ça monte en ce moment</h2>
+        {rest.length === 0 && <p className="sec small" style={{ paddingBottom: 16 }}>Classement indisponible sans clé YouTube.</p>}
+        {rest.map((v, i) => (
+          <div key={v.id} className="rank">
+            <span className="n muted num">{i + 2}</span>
+            <a className="thumb" href={v.url} target="_blank" rel="noreferrer"><img src={v.thumb} alt="" loading="lazy" /><span className="d num">{dur(v.durationSec)}</span></a>
+            <div className="info">
+              <div className="t">{v.title}</div>
+              <div className="xs muted num" style={{ marginTop: 4 }}>{v.channel} · {k(v.views)} vues{v.category ? ` · ${v.category}` : ""}</div>
             </div>
-          ))}
-        </div>
-        <div className="panel" style={{ padding: "8px 24px" }}>
-          <h2 style={{ padding: "16px 0 8px" }}>Recherches en hausse</h2>
-          {t.searches.length === 0 && <p className="sec small" style={{ paddingBottom: 16 }}>Aucune donnée sur ce relevé.</p>}
+            <div className="rate">
+              <div className="v num">+{k(rate(v))} <span className="muted">/ heure</span></div>
+              <div className="growth top"><i style={{ width: `${(rate(v) / max) * 100}%` }} /></div>
+            </div>
+            <Link href={go(`/tableau-de-bord?url=${encodeURIComponent(v.url)}`)} className="cta btn ghost sm">Clipper</Link>
+          </div>
+        ))}
+      </div>
+
+      <div className="panel" style={{ padding: "8px 24px" }}>
+        <h2 style={{ padding: "16px 0 8px" }}>Recherches en hausse</h2>
+        {t.searches.length === 0 && <p className="sec small" style={{ paddingBottom: 16 }}>Aucune donnée sur ce relevé.</p>}
+        <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", columnGap: 32, rowGap: 0, paddingBottom: 8 }}>
           {t.searches.map((s, i) => (
             <div key={s.query} className="cliprow" style={{ height: "auto", padding: "8px 0", alignItems: "flex-start", gap: 12 }}>
               <span style={{ minWidth: 0 }}><span className="muted num" style={{ marginRight: 8 }}>{i + 1}</span>{s.query}{s.news && <span className="xs muted" style={{ display: "block", marginTop: 2 }}>{s.news}</span>}</span>

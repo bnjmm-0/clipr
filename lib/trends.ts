@@ -21,17 +21,33 @@ function isoDur(d: string) {
 
 // Vidéos longues qui montent : classement YouTube « mostPopular » de la région, trié par vues par heure.
 // Si un relevé précédent existe, la croissance réelle depuis ce relevé est utilisée.
-export async function fetchYouTube(region: string, previous?: TrendVideo[]): Promise<TrendVideo[]> {
+export async function fetchYouTube(region: string, previous?: { at: Date; videos: TrendVideo[] }): Promise<TrendVideo[]> {
   const key = await getCredential("youtube");
   if (!key) return [];
-  const u = new URL(`${process.env.YOUTUBE_API_BASE ?? "https://www.googleapis.com/youtube/v3"}/videos`);
-  u.search = new URLSearchParams({ part: "snippet,statistics,contentDetails", chart: "mostPopular", regionCode: region, maxResults: "50", key }).toString();
-  const r = await fetch(u);
-  const j = await r.json();
-  if (!r.ok) throw new Error(`YouTube : ${j?.error?.message ?? r.status}`);
-  const prevMap = new Map((previous ?? []).map((v) => [v.id, v]));
+  // Jusqu'à 4 pages de 50 (1 unité de quota par page) : assez de vidéos longues après le filtre de durée.
+  const items: any[] = [];
+  let pageToken = "";
+  for (let page = 0; page < 4; page++) {
+    const u = new URL(`${process.env.YOUTUBE_API_BASE ?? "https://www.googleapis.com/youtube/v3"}/videos`);
+    u.search = new URLSearchParams({ part: "snippet,statistics,contentDetails", chart: "mostPopular", regionCode: region, maxResults: "50", key, ...(pageToken ? { pageToken } : {}) }).toString();
+    const r = await fetch(u);
+    const j = await r.json();
+    if (!r.ok) throw new Error(`YouTube : ${j?.error?.message ?? r.status}`);
+    items.push(...(j.items ?? []));
+    pageToken = j.nextPageToken ?? "";
+    if (!pageToken) break;
+  }
+  // Clipr vise les créateurs francophones : on écarte les vidéos dont la langue déclarée n'est pas le français
+  // (le classement FR mêle bandes-annonces, clips et chaînes enfants étrangers). Langue absente : on garde.
+  const french = (it: any) => {
+    const langs = [it.snippet.defaultAudioLanguage, it.snippet.defaultLanguage].filter(Boolean) as string[];
+    return langs.length === 0 || langs.some((l) => l.toLowerCase().startsWith("fr"));
+  };
+  const prevMap = new Map((previous?.videos ?? []).map((v) => [v.id, v]));
   const now = Date.now();
-  const out: TrendVideo[] = (j.items ?? []).map((it: any) => {
+  // Temps réel écoulé depuis le relevé précédent (un relevé manuel peut suivre de quelques minutes).
+  const hoursSince = previous ? (now - previous.at.getTime()) / 36e5 : 0;
+  const out: TrendVideo[] = items.filter(french).map((it: any) => {
     const views = Number(it.statistics?.viewCount ?? 0);
     const hours = Math.max(1, (now - Date.parse(it.snippet.publishedAt)) / 36e5);
     const p = prevMap.get(it.id);
@@ -40,11 +56,13 @@ export async function fetchYouTube(region: string, previous?: TrendVideo[]): Pro
       thumb: it.snippet.thumbnails?.medium?.url ?? it.snippet.thumbnails?.default?.url ?? "", category: CATEGORIES[it.snippet.categoryId],
       durationSec: isoDur(it.contentDetails?.duration ?? ""), views, publishedAt: it.snippet.publishedAt, viewsPerHour: Math.round(views / hours),
     };
-    if (p) v.growthPerHour = Math.round((views - p.views) / REFRESH_HOURS);
+    // Moins d'une heure d'écart : les compteurs YouTube bougent trop peu, on garde la mesure précédente.
+    if (p && hoursSince >= 1) v.growthPerHour = Math.round((views - p.views) / hoursSince);
+    else if (p?.growthPerHour !== undefined) v.growthPerHour = p.growthPerHour;
     return v;
   });
   // On garde les vidéos longues (au moins 8 min), celles qui se prêtent au clipping.
-  return out.filter((v) => v.durationSec >= 480).sort((a, b) => (b.growthPerHour ?? b.viewsPerHour) - (a.growthPerHour ?? a.viewsPerHour)).slice(0, 12);
+  return out.filter((v) => v.durationSec >= 480).sort((a, b) => (b.growthPerHour ?? b.viewsPerHour) - (a.growthPerHour ?? a.viewsPerHour)).slice(0, 25);
 }
 
 // Recherches en hausse (flux public Google Trends de la région).
@@ -75,7 +93,7 @@ export async function refreshTrends() {
   const s = await getSettings();
   const prev = await prisma.trendSnapshot.findFirst({ orderBy: { createdAt: "desc" } });
   const errors: string[] = [];
-  const videos = await fetchYouTube(s.trendRegion, prev ? JSON.parse(prev.videosJson) : undefined).catch((e) => { errors.push(e.message); return [] as TrendVideo[]; });
+  const videos = await fetchYouTube(s.trendRegion, prev ? { at: prev.createdAt, videos: JSON.parse(prev.videosJson) } : undefined).catch((e) => { errors.push(e.message); return [] as TrendVideo[]; });
   const searches = await fetchSearches(s.trendRegion).catch((e) => { errors.push(e.message); return [] as TrendSearch[]; });
   let ideas: TrendIdea[] = [];
   if (videos.length || searches.length) ideas = await generateIdeas(s.trendNiche, videos, searches).catch((e) => { errors.push(e.message); return []; });
