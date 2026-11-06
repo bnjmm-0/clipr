@@ -8,6 +8,8 @@ import { listElevenVoices, listTextModels } from "@/lib/providers/tools";
 import CredentialRow from "@/components/CredentialRow";
 import TextToolForm from "@/components/TextToolForm";
 import Poller from "@/components/Poller";
+import AiCardFx from "@/components/AiCardFx";
+import { GLOW } from "@/lib/ai-glow";
 import { createToolGeneration, enableFeature } from "@/app/actions";
 
 const KEY_HELP: Record<string, { url: string; how: string }> = {
@@ -37,10 +39,13 @@ export default async function ToolPage({ params }: { params: Promise<{ id: strin
   return (
     <div className="page">
       <Poller active={gens.some((g) => ["queued", "running"].includes(g.status))} />
-      <div className="pagehead"><div>
-        <p className="xs muted" style={{ marginBottom: 8 }}><Link href="/conseils-ia" style={{ textDecoration: "underline" }}>Conseils IA</Link> · {KIND_LABEL[t.kind]}</p>
-        <h1>{t.name}</h1><p>{t.intro}</p>
-      </div></div>
+      <p className="xs muted" style={{ marginBottom: 12 }}><Link href="/conseils-ia" style={{ textDecoration: "underline" }}>Conseils IA</Link> · {KIND_LABEL[t.kind]}</p>
+      <AiCardFx />
+      <div className="card aitool aibanner" style={{ "--glow": GLOW[`bg/${t.art}`] } as React.CSSProperties}>
+        <span className="aibg" style={{ backgroundImage: `url(/conseils-ia/bg/${t.art}.webp)` }} aria-hidden />
+        <img src={`/conseils-ia/logos/${t.art}.png`} alt="" className="ailogo" />
+        <div><h1>{t.name}</h1><p className="sec" style={{ marginTop: 4 }}>{t.intro}</p></div>
+      </div>
 
       {!ready ? (
         u.role !== "admin" ? (

@@ -1,0 +1,27 @@
+// Couleur des effets de survol de chaque bulle (R G B), calculée sur son illustration :
+// teinte dominante des zones lumineuses et colorées (script de génération, à relancer si une image change).
+export const GLOW: Record<string, string> = {
+  "bg/capcut": "84 235 234",
+  "bg/chatgpt": "63 235 175",
+  "bg/claude": "235 151 106",
+  "bg/elevenlabs": "106 157 235",
+  "bg/flux": "154 57 235",
+  "bg/gptImage": "106 235 198",
+  "bg/hedra": "175 106 235",
+  "bg/heygen": "106 125 235",
+  "bg/higgsfield": "235 103 114",
+  "bg/kling": "174 235 104",
+  "bg/midjourney": "106 150 235",
+  "bg/nanoBanana": "235 220 73",
+  "bg/opus": "158 45 235",
+  "bg/runway": "226 232 240",
+  "bg/seedance": "235 106 117",
+  "bg/submagic": "235 42 188",
+  "bg/suno": "235 136 104",
+  "bg/veo": "101 133 235",
+  "bg/vizard": "96 111 235",
+  "projets/clips": "235 184 106",
+  "projets/faceless": "106 195 235",
+  "projets/fruit-ia": "35 233 235",
+  "projets/influenceur-ia": "235 149 106",
+};

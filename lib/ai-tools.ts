@@ -17,6 +17,7 @@ export type ToolApp = {
   cost: string;
   fields: ToolField[];
   model?: string; // modèle Replicate ou OpenAI
+  art: string; // fond et logo : public/conseils-ia/{bg,logos}/<art>
 };
 
 const c = (...xs: (string | [string, string])[]): ToolChoice[] => xs.map((x) => (Array.isArray(x) ? { v: x[0], label: x[1] } : { v: x, label: x }));
@@ -31,21 +32,21 @@ const TEXT_FIELDS: ToolField[] = [
 
 export const TOOL_APPS: Record<string, ToolApp> = {
   chatgpt: {
-    id: "chatgpt", name: "ChatGPT", kind: "text", key: "openai",
+    id: "chatgpt", art: "chatgpt", name: "ChatGPT", kind: "text", key: "openai",
     intro: "Écris ton sujet : ChatGPT rédige le texte selon les options choisies.",
     placeholder: "Une série où des fruits vivent dans un frigo et se disputent la place au soleil",
     cost: "Quelques centimes par texte, sur ta clé OpenAI.",
     fields: TEXT_FIELDS,
   },
   claude: {
-    id: "claude", name: "Claude", kind: "text", key: "anthropic",
+    id: "claude", art: "claude", name: "Claude", kind: "text", key: "anthropic",
     intro: "Écris ton sujet : Claude rédige le texte selon les options choisies.",
     placeholder: "L'histoire vraie d'un phare abandonné en Bretagne, racontée comme un mystère",
     cost: "Quelques centimes par texte, sur ta clé Anthropic.",
     fields: TEXT_FIELDS,
   },
   "gpt-image": {
-    id: "gpt-image", name: "GPT Image 2", kind: "image", key: "openai", feature: "textToImage", model: "gpt-image-2",
+    id: "gpt-image", art: "gptImage", name: "GPT Image 2", kind: "image", key: "openai", feature: "textToImage", model: "gpt-image-2",
     intro: "Décris l'image : GPT Image 2 suit très fidèlement les détails du prompt.",
     placeholder: "Une fraise en colère avec de grands yeux, au bord d'une piscine, lumière dorée",
     cost: "Quelques centimes par image selon la qualité, sur ta clé OpenAI.",
@@ -56,7 +57,7 @@ export const TOOL_APPS: Record<string, ToolApp> = {
     ],
   },
   flux: {
-    id: "flux", name: "FLUX.2 Pro", kind: "image", key: "replicate", feature: "textToImage", model: "black-forest-labs/flux-2-pro",
+    id: "flux", art: "flux", name: "FLUX.2 Pro", kind: "image", key: "replicate", feature: "textToImage", model: "black-forest-labs/flux-2-pro",
     intro: "Décris l'image : FLUX.2 est très bon en photo réaliste et en rendu produit.",
     placeholder: "Un ananas en lunettes de soleil sur une plage, photo réaliste, fond flou",
     cost: "Quelques centimes par image, sur ton compte Replicate.",
@@ -67,7 +68,7 @@ export const TOOL_APPS: Record<string, ToolApp> = {
     ],
   },
   kling: {
-    id: "kling", name: "Kling 3.0", kind: "video", key: "replicate", feature: "textToVideo", model: "kwaivgi/kling-v3-video",
+    id: "kling", art: "kling", name: "Kling 3.0", kind: "video", key: "replicate", feature: "textToVideo", model: "kwaivgi/kling-v3-video",
     intro: "Décris la vidéo : l'action, les personnages, le mouvement de caméra. Mets les dialogues entre guillemets.",
     placeholder: "La fraise se tourne vers la banane et crie « Tu m'as menti ! », la caméra se rapproche",
     cost: "Plusieurs dizaines de centimes à quelques dollars par vidéo selon la durée et la qualité, sur ton compte Replicate.",
@@ -80,7 +81,7 @@ export const TOOL_APPS: Record<string, ToolApp> = {
     ],
   },
   veo: {
-    id: "veo", name: "Veo 3.1", kind: "video", key: "replicate", feature: "textToVideo", model: "google/veo-3.1",
+    id: "veo", art: "veo", name: "Veo 3.1", kind: "video", key: "replicate", feature: "textToVideo", model: "google/veo-3.1",
     intro: "Décris la vidéo : Veo 3.1 est le plus réaliste et génère le son (voix, bruitages, ambiance).",
     placeholder: "Un podcasteur éclate de rire face caméra dans un studio aux néons roses",
     cost: "Environ 0,40 $ par seconde avec le son (indicatif), sur ton compte Replicate.",
@@ -93,7 +94,7 @@ export const TOOL_APPS: Record<string, ToolApp> = {
     ],
   },
   seedance: {
-    id: "seedance", name: "Seedance 2.0", kind: "video", key: "replicate", feature: "textToVideo", model: "bytedance/seedance-2.0",
+    id: "seedance", art: "seedance", name: "Seedance 2.0", kind: "video", key: "replicate", feature: "textToVideo", model: "bytedance/seedance-2.0",
     intro: "Décris la vidéo : Seedance 2.0 garde bien les personnages et gère dialogues et musique.",
     placeholder: "Deux avocats dansent dans une cuisine sur une musique entraînante, plan large",
     cost: "Environ 0,15 à 0,20 $ par seconde (indicatif), sur ton compte Replicate.",
@@ -106,7 +107,7 @@ export const TOOL_APPS: Record<string, ToolApp> = {
     ],
   },
   elevenlabs: {
-    id: "elevenlabs", name: "ElevenLabs", kind: "audio", key: "elevenlabs",
+    id: "elevenlabs", art: "elevenlabs", name: "ElevenLabs", kind: "audio", key: "elevenlabs",
     intro: "Colle le texte à lire : ElevenLabs le transforme en voix off naturelle.",
     placeholder: "Ce matin-là, personne n'aurait pu imaginer ce qui se cachait derrière la porte du phare…",
     cost: "Selon ton forfait ElevenLabs (facturé au nombre de caractères).",

@@ -2,12 +2,18 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { FEATURES, getSettings } from "@/lib/settings";
 import { ADVICE_DATE, CREATORS, PROJECTS, TOOLBOX, type AiTool } from "@/lib/ai-advice";
+import AiCardFx from "@/components/AiCardFx";
+import { GLOW } from "@/lib/ai-glow";
+
+// Couleur des effets de survol, prise sur l'illustration de la bulle.
+const glow = (key: string) => ({ "--glow": GLOW[key] }) as React.CSSProperties;
 
 const ToolName = ({ tool }: { tool: AiTool }) => <a href={tool.url} target="_blank" rel="noreferrer" style={{ textDecoration: "underline", textUnderlineOffset: 3 }}>{tool.name}</a>;
 // Dans la boîte à outils : l'outil s'ouvre dans Clipr quand c'est possible, sinon sur son site.
+const Logo = ({ tool, sm }: { tool: AiTool; sm?: boolean }) => <img src={`/conseils-ia/logos/${tool.slug}.png`} alt="" className={`ailogo${sm ? " sm" : ""}`} />;
 const ToolCell = ({ tool }: { tool: AiTool }) => tool.app
-  ? <Link href={`/conseils-ia/outil/${tool.app}`} style={{ textDecoration: "underline", textUnderlineOffset: 3 }}>{tool.name}</Link>
-  : <><ToolName tool={tool} /> <span className="xs muted">↗</span></>;
+  ? <><Logo tool={tool} sm /><Link href={`/conseils-ia/outil/${tool.app}`} style={{ textDecoration: "underline", textUnderlineOffset: 3 }}>{tool.name}</Link></>
+  : <><Logo tool={tool} sm /><ToolName tool={tool} /> <span className="xs muted">↗</span></>;
 
 export default async function AiAdvice({ searchParams }: { searchParams: Promise<{ projet?: string }> }) {
   const u = await requireUser();
@@ -18,6 +24,7 @@ export default async function AiAdvice({ searchParams }: { searchParams: Promise
   const featureLabel = p.inClipr && FEATURES.find((f) => f.key === p.inClipr!.feature)?.label;
   return (
     <div className="page">
+      <AiCardFx />
       <div className="pagehead"><div><h1>Conseils IA</h1><p>Quelles IA utiliser selon ton projet, étape par étape. Sélection de {ADVICE_DATE} : les outils évoluent vite, vérifie les prix et les conditions d'usage commercial sur leur site.</p></div></div>
 
       <div className="row" style={{ gap: 8, flexWrap: "wrap", marginBottom: 24 }}>
@@ -27,7 +34,8 @@ export default async function AiAdvice({ searchParams }: { searchParams: Promise
       </div>
 
       <div className="stack-24">
-        <div className="panel stack">
+        <div className="panel stack aitool aiproject" style={glow(`projets/${p.id}`)}>
+          <span className="aibg" style={{ backgroundImage: `url(/conseils-ia/projets/${p.id}.webp)` }} aria-hidden />
           <div className="row" style={{ justifyContent: "space-between", gap: 12 }}>
             <h2>{p.title}</h2>
             {CREATORS[p.id] && <Link href={`/conseils-ia/creer?projet=${p.id}`} className="btn accent sm">Créer avec l'IA</Link>}
@@ -48,16 +56,16 @@ export default async function AiAdvice({ searchParams }: { searchParams: Promise
           <div key={st.title}>
             <h3 style={{ marginBottom: 12 }}><span className="muted num" style={{ marginRight: 8 }}>{i + 1}</span>{st.title}</h3>
             <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))" }}>
-              {st.tools.map((tool) => (
-                <div key={tool.name} className="card stack-8">
-                  <div className="row" style={{ justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
-                    <b><ToolName tool={tool} /></b>
-                    <span className="tag" style={{ whiteSpace: "nowrap" }}>{tool.price}</span>
-                  </div>
+              {st.tools.map((tool, j) => (
+                <div key={tool.name} className="card stack-8 aitool" style={{ ...glow(`bg/${tool.slug}`), animationDelay: `${(i * 2 + j) * 60}ms` }}>
+                  <span className="aibg" style={{ backgroundImage: `url(/conseils-ia/bg/${tool.slug}.webp)` }} aria-hidden />
+                  <div className="row" style={{ gap: 12, flexWrap: "nowrap" }}><Logo tool={tool} /><b><ToolName tool={tool} /></b></div>
                   <p className="small sec">{tool.why}</p>
                   <div className="row" style={{ gap: 8, marginTop: 12 }}>
                     {tool.app && <Link href={`/conseils-ia/outil/${tool.app}`} className="btn accent sm">Utiliser ici</Link>}
                     <a href={tool.url} target="_blank" rel="noreferrer" className="btn quiet sm">Site officiel ↗</a>
+                    <span className="sp" />
+                    <span className="tag" style={{ whiteSpace: "nowrap" }}>{tool.price}</span>
                   </div>
                 </div>
               ))}

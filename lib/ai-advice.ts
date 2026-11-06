@@ -5,7 +5,7 @@ import type { FeatureKey } from "./settings";
 
 export const ADVICE_DATE = "novembre 2026";
 
-export type AiTool = { name: string; url: string; why: string; price: "Gratuit" | "Gratuit pour tester" | "Payant"; app?: string }; // app : outil utilisable dans Clipr (lib/ai-tools)
+export type AiTool = { name: string; url: string; why: string; price: "Gratuit" | "Gratuit pour tester" | "Payant"; app?: string; slug?: string }; // slug : fond et logo dans public/conseils-ia/ // app : outil utilisable dans Clipr (lib/ai-tools)
 export type AiStep = { title: string; tools: AiTool[] };
 export type AiProject = {
   id: string;
@@ -38,7 +38,7 @@ const T = {
   submagic: { name: "Submagic", url: "https://www.submagic.co", price: "Gratuit pour tester" },
 } satisfies Record<string, Omit<AiTool, "why">>;
 
-const t = (k: keyof typeof T, why: string): AiTool => ({ ...T[k], why } as AiTool);
+const t = (k: keyof typeof T, why: string): AiTool => ({ ...T[k], why, slug: k } as AiTool);
 
 export const PROJECTS: AiProject[] = [
   {
