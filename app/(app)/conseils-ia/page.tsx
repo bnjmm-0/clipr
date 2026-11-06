@@ -24,7 +24,7 @@ export default async function AiAdvice({ searchParams }: { searchParams: Promise
   const featureLabel = p.inClipr && FEATURES.find((f) => f.key === p.inClipr!.feature)?.label;
   return (
     <div className="page">
-      <AiCardFx />
+      <AiCardFx key={`fx-${p.id}`} />
       <div className="pagehead"><div><h1>Conseils IA</h1><p>Quelles IA utiliser selon ton projet, étape par étape. Sélection de {ADVICE_DATE} : les outils évoluent vite, vérifie les prix et les conditions d'usage commercial sur leur site.</p></div></div>
 
       <div className="row" style={{ gap: 8, flexWrap: "wrap", marginBottom: 24 }}>
@@ -33,7 +33,7 @@ export default async function AiAdvice({ searchParams }: { searchParams: Promise
         ))}
       </div>
 
-      <div className="stack-24">
+      <div className="stack-24 swap" key={p.id}>
         <div className="panel stack aitool aiproject" style={glow(`projets/${p.id}`)}>
           <span className="aibg" style={{ backgroundImage: `url(/conseils-ia/projets/${p.id}.webp)` }} aria-hidden />
           <div className="row" style={{ justifyContent: "space-between", gap: 12 }}>
