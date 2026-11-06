@@ -417,4 +417,20 @@ footer.site .in{max-width:1200px;margin:0 auto;padding:24px 32px;display:flex;ga
 .shell{position:relative;isolation:isolate}
 .shell::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
   background:radial-gradient(120% 80% at 70% 0%,rgba(15,15,16,.15),rgba(15,15,16,.75) 70%),url(/menu/top.webp) center top/cover no-repeat,var(--bg)}
-@media (min-width:1001px){.side{background:url(/menu/side.webp) top center/100% auto no-repeat,rgba(12,12,13,.72);backdrop-filter:blur(6px)}}
+/* Le bas de l'illustration est #020202 : même couleur dessous pour éviter toute cassure */
+@media (min-width:1001px){.side{background:url(/menu/side.webp) top center/100% auto no-repeat,#020202}}
+/* Page Clips : chiffres de la bannière, flèches entre les étapes, défilement doux vers le formulaire */
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+.herostats{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+.herostats span{display:inline-flex;align-items:baseline;gap:6px;padding:6px 12px;border-radius:999px;background:rgba(20,20,21,.65);border:1px solid var(--line);font-size:13px;color:var(--text2);backdrop-filter:blur(6px);animation:pagein .5s var(--ease) both}
+.herostats span:nth-child(2){animation-delay:.08s}.herostats span:nth-child(3){animation-delay:.16s}
+.herostats b{font-size:16px;color:var(--text)}
+@media (min-width:1001px){
+  .steps3{gap:32px}
+  .stepcard{overflow:visible}
+  .stepimg{border-radius:14px 14px 0 0}
+  .stepcard:not(:last-child)::after{content:"→";position:absolute;right:-27px;top:calc(50% - 18px);width:22px;height:36px;display:grid;place-items:center;color:var(--accent);font-size:18px;opacity:.8;animation:stepnudge 2.4s var(--ease) infinite}
+  .stepcard{position:relative}
+}
+@keyframes stepnudge{0%,100%{translate:0 0}50%{translate:4px 0}}

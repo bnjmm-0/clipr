@@ -18,18 +18,24 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const { url } = await searchParams;
   const projects = await prisma.project.findMany({ where: { userId: u.id }, orderBy: { createdAt: "desc" }, include: { clips: { select: { id: true, status: true } } } });
   const credits = await prisma.creditLedger.aggregate({ where: { userId: u.id }, _sum: { minutes: true } });
+  const readyClips = projects.reduce((n, p) => n + p.clips.filter((c) => c.status === "ready").length, 0);
   return (
     <div className="page">
       <AiCardFx />
       <div className="panel aitool aiproject clipshero">
         <span className="aibg" style={{ backgroundImage: "url(/clips/hero.webp)" }} aria-hidden />
-        <div className="row" style={{ alignItems: "flex-start", gap: 16 }}>
-          <div style={{ maxWidth: 560 }}>
-            <h1>Clips</h1>
-            <p className="sec" style={{ marginTop: 8 }}>Importe une vidéo longue : Clipr garde les meilleurs passages et les rend en vertical avec sous-titres animés et miniature.</p>
+        <div style={{ maxWidth: 600 }}>
+          <h1>Clips</h1>
+          <p className="sec" style={{ marginTop: 8 }}>Importe une vidéo longue : Clipr garde les meilleurs passages et les rend en vertical avec sous-titres animés et miniature.</p>
+          <div className="row" style={{ gap: 10, marginTop: 20 }}>
+            <a href="#nouveau" className="btn accent">Nouveau projet</a>
+            <Link href="/tendances-du-moment" className="btn ghost">Trouver une vidéo qui monte</Link>
           </div>
-          <span className="sp" />
-          <span className="tag" style={{ background: "rgba(20,20,21,.7)", padding: "4px 10px", borderRadius: 999 }}>{u.role === "admin" ? "Minutes illimitées (admin)" : `${Math.max(0, credits._sum.minutes ?? 0)} min restantes`}</span>
+          <div className="herostats">
+            <span><b className="num">{projects.length}</b> projet{projects.length > 1 ? "s" : ""}</span>
+            <span><b className="num">{readyClips}</b> clip{readyClips > 1 ? "s" : ""} prêt{readyClips > 1 ? "s" : ""}</span>
+            <span><b className="num">{u.role === "admin" ? "∞" : Math.max(0, credits._sum.minutes ?? 0)}</b> {u.role === "admin" ? "minutes (admin)" : "min restantes"}</span>
+          </div>
         </div>
       </div>
 
@@ -45,7 +51,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </div>
       )}
 
-      <div className="grid" style={{ gridTemplateColumns: "minmax(0,1.1fr) minmax(0,.9fr)", alignItems: "start", gap: 24 }}>
+      <div id="nouveau" className="grid" style={{ gridTemplateColumns: "minmax(0,1.1fr) minmax(0,.9fr)", alignItems: "start", gap: 24, scrollMarginTop: 80 }}>
         <NewProject defaultUrl={url} />
         <div className="panel" style={{ padding: "8px 24px" }}>
           <h2 style={{ padding: "16px 0 8px" }}>Projets</h2>
