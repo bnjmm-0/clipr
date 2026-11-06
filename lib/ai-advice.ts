@@ -5,7 +5,7 @@ import type { FeatureKey } from "./settings";
 
 export const ADVICE_DATE = "novembre 2026";
 
-export type AiTool = { name: string; url: string; why: string; price: "Gratuit" | "Gratuit pour tester" | "Payant" };
+export type AiTool = { name: string; url: string; why: string; price: "Gratuit" | "Gratuit pour tester" | "Payant"; app?: string }; // app : outil utilisable dans Clipr (lib/ai-tools)
 export type AiStep = { title: string; tools: AiTool[] };
 export type AiProject = {
   id: string;
@@ -17,18 +17,18 @@ export type AiProject = {
 };
 
 const T = {
-  chatgpt: { name: "ChatGPT", url: "https://chatgpt.com", price: "Gratuit pour tester" },
-  claude: { name: "Claude", url: "https://claude.ai", price: "Gratuit pour tester" },
-  gptImage: { name: "GPT Image 2 (dans ChatGPT)", url: "https://chatgpt.com", price: "Gratuit pour tester" },
+  chatgpt: { name: "ChatGPT", url: "https://chatgpt.com", price: "Gratuit pour tester", app: "chatgpt" },
+  claude: { name: "Claude", url: "https://claude.ai", price: "Gratuit pour tester", app: "claude" },
+  gptImage: { name: "GPT Image 2 (dans ChatGPT)", url: "https://chatgpt.com", price: "Gratuit pour tester", app: "gpt-image" },
   nanoBanana: { name: "Nano Banana (Gemini)", url: "https://gemini.google.com", price: "Gratuit pour tester" },
   midjourney: { name: "Midjourney", url: "https://www.midjourney.com", price: "Payant" },
-  flux: { name: "FLUX.2", url: "https://bfl.ai", price: "Gratuit pour tester" },
-  kling: { name: "Kling 3.0", url: "https://klingai.com", price: "Gratuit pour tester" },
-  veo: { name: "Veo 3.1 (Google)", url: "https://gemini.google.com", price: "Payant" },
-  seedance: { name: "Seedance 2.0 (Dreamina)", url: "https://dreamina.capcut.com", price: "Gratuit pour tester" },
+  flux: { name: "FLUX.2", url: "https://bfl.ai", price: "Gratuit pour tester", app: "flux" },
+  kling: { name: "Kling 3.0", url: "https://klingai.com", price: "Gratuit pour tester", app: "kling" },
+  veo: { name: "Veo 3.1 (Google)", url: "https://gemini.google.com", price: "Payant", app: "veo" },
+  seedance: { name: "Seedance 2.0 (Dreamina)", url: "https://dreamina.capcut.com", price: "Gratuit pour tester", app: "seedance" },
   runway: { name: "Runway Gen-4.5", url: "https://runwayml.com", price: "Gratuit pour tester" },
   higgsfield: { name: "Higgsfield (Soul ID)", url: "https://higgsfield.ai", price: "Payant" },
-  elevenlabs: { name: "ElevenLabs", url: "https://elevenlabs.io", price: "Gratuit pour tester" },
+  elevenlabs: { name: "ElevenLabs", url: "https://elevenlabs.io", price: "Gratuit pour tester", app: "elevenlabs" },
   heygen: { name: "HeyGen", url: "https://www.heygen.com", price: "Gratuit pour tester" },
   hedra: { name: "Hedra", url: "https://www.hedra.com", price: "Gratuit pour tester" },
   suno: { name: "Suno", url: "https://suno.com", price: "Gratuit pour tester" },

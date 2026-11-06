@@ -37,7 +37,7 @@ export async function generateVideo(prompt: string, outFile: string, userId: str
   return outFile;
 }
 
-async function replicateRun(model: string, input: Record<string, unknown>): Promise<string> {
+export async function replicateRun(model: string, input: Record<string, unknown>): Promise<string> {
   const key = await requireCredential("replicate");
   const h = { authorization: `Bearer ${key}`, "content-type": "application/json", prefer: "wait" };
   let r = await fetch(`https://api.replicate.com/v1/models/${model}/predictions`, { method: "POST", headers: h, body: JSON.stringify({ input }) });
@@ -54,7 +54,7 @@ async function replicateRun(model: string, input: Record<string, unknown>): Prom
   return out;
 }
 
-async function download(url: string, outFile: string) {
+export async function download(url: string, outFile: string) {
   const r = await fetch(url);
   if (!r.ok) throw new Error(`Téléchargement : ${r.status}`);
   fs.mkdirSync(path.dirname(outFile), { recursive: true });

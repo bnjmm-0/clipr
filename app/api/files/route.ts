@@ -24,13 +24,14 @@ export async function GET(req: Request) {
     name = `${(e?.title || "video").replace(/[^\p{L}\p{N} _-]/gu, "").slice(0, 60)}${kind === "cover" ? " - miniature" : ""}.${img ? "jpg" : "mp4"}`;
   } else if (q.get("gen")) {
     const g = await prisma.generation.findFirst({ where: { id: q.get("gen")!, userId: u.id } });
-    file = g?.filePath; name = `generation.${g?.kind === "image" ? "png" : "mp4"}`;
+    file = g?.filePath; name = `generation.${g?.filePath?.split(".").pop() ?? (g?.kind === "image" ? "png" : "mp4")}`;
   }
   if (!file) return new Response("Introuvable", { status: 404 });
   const path = safeResolve(file);
   if (!fs.existsSync(path)) return new Response("Introuvable", { status: 404 });
   const size = fs.statSync(path).size;
-  const type = path.endsWith(".mp4") ? "video/mp4" : path.endsWith(".png") ? "image/png" : "image/jpeg";
+  const TYPES: Record<string, string> = { mp4: "video/mp4", png: "image/png", webp: "image/webp", mp3: "audio/mpeg" };
+  const type = TYPES[path.split(".").pop() ?? ""] ?? "image/jpeg";
   const headers: Record<string, string> = { "content-type": type, "accept-ranges": "bytes", "cache-control": "private, max-age=60" };
   if (q.get("dl")) headers["content-disposition"] = `attachment; filename*=UTF-8''${encodeURIComponent(name)}`;
   const range = req.headers.get("range")?.match(/bytes=(\d*)-(\d*)/);

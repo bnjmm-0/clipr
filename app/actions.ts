@@ -9,6 +9,7 @@ import { enqueue } from "@/lib/jobs";
 import { chat } from "@/lib/providers/llm";
 import { accountSnapshot } from "@/lib/providers/tiktok";
 import { CREATORS } from "@/lib/ai-advice";
+import { TOOL_APPS, pickOptions } from "@/lib/ai-tools";
 
 export type FormState = { error?: string; ok?: string } | undefined;
 
@@ -70,6 +71,7 @@ export async function saveCredential(_: FormState, fd: FormData): Promise<FormSt
   await setCredential(name, value);
   revalidatePath("/reglages");
   revalidatePath("/conseils-ia/creer");
+  revalidatePath("/conseils-ia/outil/[id]", "page");
   return { ok: "Clé enregistrée (chiffrée)" };
 }
 
@@ -352,12 +354,63 @@ export async function createFromAdvice(fd: FormData) {
   revalidatePath("/generer");
 }
 
-// Active « Texte → image » sans passer par Réglages (bouton de la page Créer avec l'IA).
-export async function enableImageGeneration() {
+// Active « Texte → image » ou « Texte → vidéo » sans passer par Réglages (pages Créer avec l'IA et outils).
+export async function enableFeature(fd: FormData) {
   await requireAdmin();
+  const f = String(fd.get("feature"));
+  if (f !== "textToImage" && f !== "textToVideo") return;
   const s = await getSettings();
-  await prisma.appSettings.update({ where: { id: "global" }, data: { featuresJson: JSON.stringify({ ...s.features, textToImage: true }) } });
+  await prisma.appSettings.update({ where: { id: "global" }, data: { featuresJson: JSON.stringify({ ...s.features, [f]: true }) } });
   revalidatePath("/", "layout");
+}
+
+// ——— Outils de Conseils IA utilisés dans Clipr ———
+const ID_RE = /^[\w.:-]{1,80}$/;
+
+// Image, vidéo ou voix : mis en file comme une génération ; le worker appelle l'API de l'outil.
+export async function createToolGeneration(fd: FormData) {
+  const u = await requireUser();
+  const t = TOOL_APPS[String(fd.get("tool"))];
+  if (!t || t.kind === "text") return;
+  if (t.feature && !(await featureEnabled(t.feature))) throw new Error("Fonction désactivée");
+  const prompt = String(fd.get("prompt") || "").trim().slice(0, t.kind === "audio" ? 3000 : 2000);
+  if (!prompt) return;
+  const input: Record<string, string> = { prompt, ...pickOptions(t, (n) => fd.get(n) as string | null) };
+  if (t.kind === "audio") {
+    for (const n of ["voice_id", "model_id"]) { const v = String(fd.get(n) || ""); if (v && ID_RE.test(v)) input[n] = v; }
+    if (!input.voice_id) throw new Error("Choisis une voix");
+  }
+  const n = t.kind === "image" ? Math.min(4, Math.max(1, Number(fd.get("count")) || 1)) : 1;
+  for (let i = 0; i < n; i++) {
+    const g = await prisma.generation.create({ data: { userId: u.id, kind: t.kind, prompt: `${t.name} · ${prompt}` } });
+    await enqueue("generate", { generationId: g.id, tool: t.id, input });
+  }
+  revalidatePath(`/conseils-ia/outil/${t.id}`);
+  revalidatePath("/generer");
+}
+
+export type TextToolState = { error?: string; text?: string } | undefined;
+
+// ChatGPT ou Claude : réponse directe, affichée dans la page.
+export async function runTextTool(_: TextToolState, fd: FormData): Promise<TextToolState> {
+  const u = await requireUser();
+  const t = TOOL_APPS[String(fd.get("tool"))];
+  if (!t || t.kind !== "text") return { error: "Outil inconnu" };
+  const idea = String(fd.get("prompt") || "").trim().slice(0, 2000);
+  if (!idea) return { error: "Écris ton sujet" };
+  const o = pickOptions(t, (n) => fd.get(n) as string | null);
+  const model = String(fd.get("model") || "");
+  try {
+    const text = await chat({
+      provider: t.key === "anthropic" ? "anthropic" : "openai", model: ID_RE.test(model) ? model : undefined,
+      userId: u.id, purpose: `outil ${t.name}`, maxTokens: 2500,
+      system: "Tu es scénariste et stratège de contenus courts (TikTok, Reels, Shorts) pour le public francophone. Tu écris des textes concrets, rythmés, prêts à tourner, sans inventer de chiffres ni de faits.",
+      user: `Type : ${o.type}. Plateforme : ${o.platform}. Durée visée : ${o.length}. Ton : ${o.tone}.\nSujet : ${idea}\nRédige directement le résultat en français, prêt à utiliser, sans préambule.`,
+    });
+    return { text };
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
 }
 
 // ——— Coach TikTok ———

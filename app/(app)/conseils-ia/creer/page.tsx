@@ -5,7 +5,7 @@ import { CREDENTIALS, credentialStatus, getSettings } from "@/lib/settings";
 import { CREATORS, PROJECTS } from "@/lib/ai-advice";
 import CredentialRow from "@/components/CredentialRow";
 import Poller from "@/components/Poller";
-import { createFromAdvice, enableImageGeneration } from "@/app/actions";
+import { createFromAdvice, enableFeature } from "@/app/actions";
 
 const KEY_HELP: Record<string, { url: string; how: string }> = {
   openai: { url: "https://platform.openai.com/api-keys", how: "Sur platform.openai.com → API keys → Create new secret key (compte avec un moyen de paiement)." },
@@ -50,7 +50,7 @@ export default async function CreateWithAi({ searchParams }: { searchParams: Pro
               </>
             )}
             {featureOff && (
-              <form action={enableImageGeneration} className="row" style={{ marginTop: 16 }}>
+              <form action={enableFeature} className="row" style={{ marginTop: 16 }}><input type="hidden" name="feature" value="textToImage" />
                 <span className="small sec" style={{ flex: "1 1 240px" }}>La création d'images est désactivée dans Réglages.</span>
                 <button className="btn accent sm">Activer la création d'images</button>
               </form>

@@ -11,6 +11,7 @@ export const CREDENTIALS = [
   { name: "meta_app_id", label: "Meta — App ID", help: "App développeur Meta (Facebook) créée sous votre compte" },
   { name: "meta_app_secret", label: "Meta — App secret", help: "De la même app Meta" },
   { name: "youtube", label: "YouTube Data API", help: "Clé Google Cloud pour relever les vidéos qui montent (Tendances)" },
+  { name: "elevenlabs", label: "ElevenLabs", help: "Voix off réalistes (outil ElevenLabs de Conseils IA)" },
 ] as const;
 export type CredentialName = (typeof CREDENTIALS)[number]["name"];
 

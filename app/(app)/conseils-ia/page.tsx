@@ -4,6 +4,10 @@ import { FEATURES, getSettings } from "@/lib/settings";
 import { ADVICE_DATE, CREATORS, PROJECTS, TOOLBOX, type AiTool } from "@/lib/ai-advice";
 
 const ToolName = ({ tool }: { tool: AiTool }) => <a href={tool.url} target="_blank" rel="noreferrer" style={{ textDecoration: "underline", textUnderlineOffset: 3 }}>{tool.name}</a>;
+// Dans la boîte à outils : l'outil s'ouvre dans Clipr quand c'est possible, sinon sur son site.
+const ToolCell = ({ tool }: { tool: AiTool }) => tool.app
+  ? <Link href={`/conseils-ia/outil/${tool.app}`} style={{ textDecoration: "underline", textUnderlineOffset: 3 }}>{tool.name}</Link>
+  : <><ToolName tool={tool} /> <span className="xs muted">↗</span></>;
 
 export default async function AiAdvice({ searchParams }: { searchParams: Promise<{ projet?: string }> }) {
   const u = await requireUser();
@@ -51,6 +55,10 @@ export default async function AiAdvice({ searchParams }: { searchParams: Promise
                     <span className="tag" style={{ whiteSpace: "nowrap" }}>{tool.price}</span>
                   </div>
                   <p className="small sec">{tool.why}</p>
+                  <div className="row" style={{ gap: 8, marginTop: 12 }}>
+                    {tool.app && <Link href={`/conseils-ia/outil/${tool.app}`} className="btn accent sm">Utiliser ici</Link>}
+                    <a href={tool.url} target="_blank" rel="noreferrer" className="btn quiet sm">Site officiel ↗</a>
+                  </div>
                 </div>
               ))}
             </div>
@@ -71,7 +79,7 @@ export default async function AiAdvice({ searchParams }: { searchParams: Promise
               <thead><tr><th>Besoin</th><th>Notre choix</th><th>Alternative</th></tr></thead>
               <tbody>
                 {TOOLBOX.map((r) => (
-                  <tr key={r.need}><td>{r.need}</td><td><ToolName tool={r.pick} /></td><td className="sec"><ToolName tool={r.alt} /></td></tr>
+                  <tr key={r.need}><td>{r.need}</td><td><ToolCell tool={r.pick} /></td><td className="sec"><ToolCell tool={r.alt} /></td></tr>
                 ))}
               </tbody>
             </table>

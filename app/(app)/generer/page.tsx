@@ -25,7 +25,7 @@ export default async function Generate() {
       <div className="grid" style={{ marginTop: 24, gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))" }}>
         {gens.map((g) => (
           <div key={g.id} className="card clip">
-            {g.status === "ready" ? (g.kind === "image" ? <img className="media" src={`/api/files?gen=${g.id}`} alt={g.prompt} /> : <video src={`/api/files?gen=${g.id}`} controls playsInline />)
+            {g.status === "ready" ? (g.kind === "image" ? <img className="media" src={`/api/files?gen=${g.id}`} alt={g.prompt} /> : g.kind === "audio" ? <audio src={`/api/files?gen=${g.id}`} controls style={{ width: "100%" }} /> : <video src={`/api/files?gen=${g.id}`} controls playsInline />)
               : <div className="placeholder"><span className="tag"><span className={`dot ${g.status === "failed" ? "err" : "live"}`} />{g.status === "failed" ? "Échec" : "Génération en cours"}</span></div>}
             <div className="b"><p className="small">{g.prompt}</p>{g.error && <p className="alert">{g.error}</p>}
               {g.status === "ready" && <a className="btn sm" href={`/api/files?gen=${g.id}&dl=1`}>Télécharger</a>}</div>

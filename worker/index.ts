@@ -4,6 +4,7 @@ import path from "node:path";
 import { prisma } from "../lib/db";
 import { processProject, renderOne } from "../lib/pipeline/process";
 import { generateImage, generateVideo } from "../lib/providers/media";
+import { runTool } from "../lib/providers/tools";
 import { publishVideo } from "../lib/providers/tiktok";
 import { fbPublishReel } from "../lib/providers/facebook";
 import { processEpisode } from "../lib/pipeline/episode";
@@ -22,8 +23,10 @@ async function handle(job: { id: string; type: string; payload: string; projectI
     case "generate": {
       const g = await prisma.generation.findUniqueOrThrow({ where: { id: p.generationId } });
       await prisma.generation.update({ where: { id: g.id }, data: { status: "running" } });
-      const out = path.join(genDir(), `${g.id}.${g.kind === "image" ? "png" : "mp4"}`);
-      await (g.kind === "image" ? generateImage(g.prompt, out, g.userId) : generateVideo(g.prompt, out, g.userId));
+      const base = path.join(genDir(), g.id);
+      // Outil de Conseils IA (p.tool) : modèle et options dans la tâche ; sinon génération simple de Réglages.
+      const out = p.tool ? await runTool(p.tool, p.input ?? {}, base, g.userId)
+        : g.kind === "image" ? await generateImage(g.prompt, `${base}.png`, g.userId) : await generateVideo(g.prompt, `${base}.mp4`, g.userId);
       await prisma.generation.update({ where: { id: g.id }, data: { status: "ready", filePath: out } });
       return;
     }
