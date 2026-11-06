@@ -14,6 +14,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     f.aiVideos && { href: "/videos-ia", label: "Vidéos IA et séries", icon: "film" },
     f.remix && { href: "/reprendre", label: "Reprendre une vidéo", icon: "copy" },
     (f.textToImage || f.textToVideo) && { href: "/generer", label: "Images et vidéos", icon: "image" },
+    { href: "/conseils-ia", label: "Conseils IA", icon: "spark" },
   ].filter(Boolean) as { href: string; label: string; icon: string }[];
   const grow = [
     f.trends && { href: "/tendances-du-moment", label: "Tendances", icon: "trend" },
