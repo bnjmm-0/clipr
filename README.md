@@ -72,6 +72,9 @@ Chaque étape enregistre son résultat : une relance reprend là où le traiteme
 - **Publication automatique** (`/comptes`) : créneaux quotidiens ; chaque clip ou épisode prêt part au prochain créneau libre sur TikTok et/ou Facebook.
 - **Statistiques** (`/statistiques`) : abonnés, vues, j'aime, meilleures vidéos, relevés toutes les 6 h, courbe d'évolution.
 - Clips jusqu'à 180 s.
+- **Ouverture de la page d'accueil** : deux versions au choix dans `app/(site)/page.tsx`, via `OUVERTURE_MAGNIFIC`.
+  `false` = film en images (`OpeningFilm`, `public/intro/`), `true` = vidéo Magnific pilotée par le scroll
+  (`ScrollIntro`, `public/intro.mp4`).
 
 La charte graphique suit le guide unslop (unslop par Damir Sokolovsky, @heydamir, CC BY 4.0) : une seule couleur d'accent,
 le jaune des sous-titres, et le « mot actif » comme signature.
