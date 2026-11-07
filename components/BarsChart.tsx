@@ -6,8 +6,10 @@ const fmt = (v: number) => (Math.abs(v) >= 1e4 ? `${(v / 1e3).toLocaleString("fr
 
 export type Bar = { label: string; v: number; tip?: string; n?: number };
 
-export default function BarsChart({ bars, unit, height = 200, showLabels = true }: { bars: Bar[]; unit: string; height?: number; showLabels?: boolean }) {
+// decimals : nombre de chiffres après la virgule (montants en dollars par exemple) ; sinon valeurs arrondies.
+export default function BarsChart({ bars, unit, height = 200, showLabels = true, decimals }: { bars: Bar[]; unit: string; height?: number; showLabels?: boolean; decimals?: number }) {
   const [hover, setHover] = useState<number | null>(null);
+  const show = (v: number) => (decimals === undefined ? fmt(v) : v.toLocaleString("fr-FR", { minimumFractionDigits: decimals, maximumFractionDigits: decimals }));
   const max = Math.max(1, ...bars.map((b) => b.v));
   const top = bars.findIndex((b) => b.v === max && b.v > 0);
   if (!bars.some((b) => b.v > 0)) return <div className="chartempty" style={{ height }}><span className="xs muted">Pas encore assez de données</span></div>;
@@ -15,11 +17,11 @@ export default function BarsChart({ bars, unit, height = 200, showLabels = true 
     <div className="chartwrap">
       <div className="bars" style={{ height }} onPointerLeave={() => setHover(null)}>
         {bars.map((b, i) => (
-          <div key={i} className={`barcol ${hover === i ? "on" : ""}`} onPointerEnter={() => setHover(i)} onFocus={() => setHover(i)} tabIndex={0} aria-label={`${b.tip ?? b.label} : ${fmt(b.v)} ${unit}`}>
-            {i === top && hover === null && <b className="barpeak num">{fmt(b.v)}</b>}
+          <div key={i} className={`barcol ${hover === i ? "on" : ""}`} onPointerEnter={() => setHover(i)} onFocus={() => setHover(i)} tabIndex={0} aria-label={`${b.tip ?? b.label} : ${show(b.v)} ${unit}`}>
+            {i === top && hover === null && <b className="barpeak num">{show(b.v)}</b>}
             <i className={i === top ? "top" : ""} style={{ height: `${Math.max(b.v > 0 ? 3 : 0, (b.v / max) * 88)}%`, animationDelay: `${i * 30}ms` }} />
             {showLabels && <span className="xs muted">{b.label}</span>}
-            {hover === i && <div className="charttip bartip"><div className="xs muted">{b.tip ?? b.label}</div><b className="num">{b.v.toLocaleString("fr-FR", { maximumFractionDigits: 0 })}</b> <span className="xs muted">{unit}{b.n !== undefined ? ` · ${b.n} vidéo${b.n > 1 ? "s" : ""}` : ""}</span></div>}
+            {hover === i && <div className="charttip bartip"><div className="xs muted">{b.tip ?? b.label}</div><b className="num">{decimals === undefined ? b.v.toLocaleString("fr-FR", { maximumFractionDigits: 0 }) : show(b.v)}</b> <span className="xs muted">{unit}{b.n !== undefined ? ` · ${b.n} vidéo${b.n > 1 ? "s" : ""}` : ""}</span></div>}
           </div>
         ))}
       </div>
