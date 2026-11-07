@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import Link from "next/link";
 import { currentUser } from "@/lib/auth";
 import ClipPreview from "@/components/ClipPreview";
@@ -10,7 +12,10 @@ import AiCardFx from "@/components/AiCardFx";
 // true = vidéo Magnific pilotée par le scroll (ScrollIntro, /intro.mp4).
 const OUVERTURE_MAGNIFIC = false;
 
-// Visuels générés avec Magnific (public/accueil/ et public/clips/).
+// Visuels générés avec Magnific (public/accueil/ et public/clips/), animés en boucles vidéo avec Higgsfield (même nom en .mp4).
+// Boucle vidéo d'un visuel, seulement si le fichier existe : sinon l'image reste seule.
+const loop = (img: string) => { const v = img.replace(".webp", ".mp4"); return existsSync(join(process.cwd(), "public", v)) ? v : null; };
+
 const PLATFORMS = [["tiktok", "TikTok"], ["facebook", "Facebook"], ["youtube", "YouTube Shorts"]];
 
 const MARQUEE = ["Transcription mot à mot", "Chaque passage noté sur 100", "Recadrage 9:16", "Sous-titres animés", "Miniature générée", "Publication planifiée", "Séries vidéo IA", "Tendances YouTube France", "Statistiques des comptes"];
@@ -65,6 +70,7 @@ export default async function Home() {
     <AiCardFx />
     <main className="wrap">
       <section className="hero lhero" id="produit">
+        <span className="herobg" aria-hidden>{loop("/accueil/hero-glow.webp") && <video className="bgvid" src={loop("/accueil/hero-glow.webp")!} muted loop playsInline preload="none" />}</span>
         <div className="enter">
           <span className="eyebrow"><i />Clips, séries IA, tendances, publication</span>
           <h2 className="h1">Tes vidéos longues deviennent des clips qui <span className="word">accrochent</span></h2>
@@ -117,7 +123,7 @@ export default async function Home() {
         <div className="bento">
           {FEATURES.map((f) => (
             <div key={f.t} className={`card aitool bentocard ${f.size ?? ""}`} style={{ "--glow": f.glow } as React.CSSProperties}>
-              <span className="aibg" style={{ backgroundImage: `url(${f.img})` }} aria-hidden />
+              <span className="aibg" style={{ backgroundImage: `url(${f.img})` }} aria-hidden>{loop(f.img) && <video className="aivid" src={loop(f.img)!} muted loop playsInline preload="none" />}</span>
               <span className="bicon"><Icon name={f.icon} /></span>
               <h3>{f.t}</h3>
               <p className="small sec">{f.d}</p>
@@ -174,7 +180,7 @@ export default async function Home() {
       </section>
 
       <section className="lcta">
-        <span className="ctabg" aria-hidden />
+        <span className="ctabg" aria-hidden>{loop("/accueil/cta.webp") && <video className="bgvid" src={loop("/accueil/cta.webp")!} muted loop playsInline preload="none" />}</span>
         <h2>Ta prochaine vidéo longue vaut une semaine de clips</h2>
         <p className="sec">Colle un lien, Clipr s'occupe du reste.</p>
         {paste}

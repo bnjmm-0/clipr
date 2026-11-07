@@ -35,8 +35,28 @@ export default function AiCardFx() {
     };
     const pointer = matchMedia("(hover: hover) and (pointer: fine)").matches;
     if (pointer) document.addEventListener("pointermove", move, { passive: true });
+
+    // Boucles vidéo (Higgsfield) : video.bgvid tourne tant qu'elle est à l'écran ;
+    // video.aivid dans une bulle démarre au survol (ordinateur) ou quand la bulle est visible (téléphone).
+    const play = (v: HTMLVideoElement) => { v.preload = "auto"; v.play().catch(() => {}); };
+    const vids = [...document.querySelectorAll<HTMLVideoElement>("video.bgvid, video.aivid")];
+    vids.forEach((v) => v.addEventListener("playing", () => v.classList.add("on"), { once: true }));
+    const vio = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        const v = e.target as HTMLVideoElement;
+        if (e.isIntersecting && (v.classList.contains("bgvid") || !pointer)) play(v); else v.pause();
+      }
+    }, { threshold: 0.4 });
+    vids.forEach((v) => vio.observe(v));
+    const cards = vids.filter((v) => v.classList.contains("aivid")).map((v) => [v.closest<HTMLElement>(".aitool")!, v] as const);
+    const enter = (v: HTMLVideoElement) => () => play(v), leave = (v: HTMLVideoElement) => () => v.pause();
+    const handlers = cards.map(([c, v]) => [c, enter(v), leave(v)] as const);
+    if (pointer) handlers.forEach(([c, on, off]) => { c.addEventListener("pointerenter", on); c.addEventListener("pointerleave", off); });
+
     return () => {
       io.disconnect();
+      vio.disconnect();
+      if (pointer) handlers.forEach(([c, on, off]) => { c.removeEventListener("pointerenter", on); c.removeEventListener("pointerleave", off); });
       if (pointer) document.removeEventListener("pointermove", move);
     };
   }, []);
