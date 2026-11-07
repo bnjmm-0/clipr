@@ -57,7 +57,7 @@ export default async function Settings() {
           <div className="panel" style={{ paddingBottom: 8 }}>
             <h2>Clés API</h2>
             <p className="xs muted" style={{ marginTop: 4 }}>Chiffrées côté serveur (AES-256-GCM), jamais renvoyées au navigateur : seuls les 4 derniers caractères s'affichent.</p>
-            {CREDENTIALS.map((c) => <CredentialRow key={c.name} name={c.name} label={c.label} help={c.help} last4={creds[c.name]?.last4} />)}
+            {CREDENTIALS.map((c) => <CredentialRow key={c.name} name={c.name} label={c.label} help={c.help} url={c.url} last4={creds[c.name]?.last4} />)}
           </div>
           <div className="panel">
             <h2>Ton app TikTok</h2>

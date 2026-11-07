@@ -558,3 +558,4 @@ html{scroll-behavior:smooth}
 @media (hover:hover){.urow:hover{background:rgba(255,255,255,.02)}}
 @media (max-width:1000px){.ukpis{grid-template-columns:repeat(2,minmax(0,1fr))}.ufams{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:640px){.ufams{grid-template-columns:1fr}.ufam{min-height:200px}.urow{grid-template-columns:48px minmax(0,1fr) auto;gap:10px}.uthumb{width:48px;height:32px}.uvol{display:none}.uquota{align-items:flex-start}}
+.credlink{color:var(--accent);text-decoration:underline;text-underline-offset:2px}.credlink:hover{color:#fff}

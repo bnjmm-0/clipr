@@ -2,18 +2,18 @@ import { prisma } from "./db";
 import { open, seal } from "./crypto";
 
 export const CREDENTIALS = [
-  { name: "openai", label: "OpenAI", help: "LLM (scoring, Coach), transcription Whisper, images" },
-  { name: "anthropic", label: "Anthropic (Claude)", help: "LLM alternatif pour le scoring et le Coach" },
-  { name: "groq", label: "Groq", help: "Transcription Whisper rapide et peu chère (alternative à OpenAI)" },
-  { name: "replicate", label: "Replicate", help: "Génération d'images et de vidéos (modèles au choix)" },
-  { name: "tiktok_client_key", label: "TikTok — Client key", help: "De l'app développeur TikTok créée sous votre compte" },
-  { name: "tiktok_client_secret", label: "TikTok — Client secret", help: "De la même app développeur TikTok" },
-  { name: "meta_app_id", label: "Meta — App ID", help: "App développeur Meta (Facebook) créée sous votre compte" },
-  { name: "meta_app_secret", label: "Meta — App secret", help: "De la même app Meta" },
-  { name: "youtube", label: "YouTube Data API — Clé", help: "Clé Google Cloud pour relever les vidéos qui montent (Tendances)" },
-  { name: "google_client_id", label: "YouTube — Client ID OAuth", help: "Du projet Google Cloud créé sous votre compte (publication des Shorts)" },
-  { name: "google_client_secret", label: "YouTube — Client secret OAuth", help: "Du même identifiant OAuth Google" },
-  { name: "elevenlabs", label: "ElevenLabs", help: "Voix off réalistes (outil ElevenLabs de Conseils IA)" },
+  { name: "openai", label: "OpenAI", help: "LLM (scoring, Coach), transcription Whisper, images", url: "https://platform.openai.com/api-keys" },
+  { name: "anthropic", label: "Anthropic (Claude)", help: "LLM alternatif pour le scoring et le Coach", url: "https://console.anthropic.com/settings/keys" },
+  { name: "groq", label: "Groq", help: "Transcription Whisper rapide et peu chère (alternative à OpenAI)", url: "https://console.groq.com/keys" },
+  { name: "replicate", label: "Replicate", help: "Génération d'images et de vidéos (modèles au choix)", url: "https://replicate.com/account/api-tokens" },
+  { name: "tiktok_client_key", label: "TikTok — Client key", help: "De l'app développeur TikTok créée sous votre compte", url: "https://developers.tiktok.com/apps" },
+  { name: "tiktok_client_secret", label: "TikTok — Client secret", help: "De la même app développeur TikTok", url: "https://developers.tiktok.com/apps" },
+  { name: "meta_app_id", label: "Meta — App ID", help: "App développeur Meta (Facebook) créée sous votre compte", url: "https://developers.facebook.com/apps" },
+  { name: "meta_app_secret", label: "Meta — App secret", help: "De la même app Meta", url: "https://developers.facebook.com/apps" },
+  { name: "youtube", label: "YouTube Data API — Clé", help: "Clé Google Cloud pour relever les vidéos qui montent (Tendances)", url: "https://console.cloud.google.com/apis/credentials" },
+  { name: "google_client_id", label: "YouTube — Client ID OAuth", help: "Du projet Google Cloud créé sous votre compte (publication des Shorts)", url: "https://console.cloud.google.com/apis/credentials" },
+  { name: "google_client_secret", label: "YouTube — Client secret OAuth", help: "Du même identifiant OAuth Google", url: "https://console.cloud.google.com/apis/credentials" },
+  { name: "elevenlabs", label: "ElevenLabs", help: "Voix off réalistes (outil ElevenLabs de Conseils IA)", url: "https://elevenlabs.io/app/settings/api-keys" },
 ] as const;
 export type CredentialName = (typeof CREDENTIALS)[number]["name"];
 
