@@ -1,5 +1,6 @@
 import { getSettings, requireCredential } from "../settings";
 import { priceOf, recordUsage } from "../usage";
+import { apiError } from "./errors";
 
 export type ChatOpts = {
   system: string; user: string; json?: boolean; maxTokens?: number; userId?: string | null; purpose?: string;
@@ -23,7 +24,7 @@ export async function chat(o: ChatOpts): Promise<string> {
       }),
     });
     const j = await r.json();
-    if (!r.ok) throw new Error(`Anthropic : ${j?.error?.message ?? r.status}`);
+    if (!r.ok) throw apiError("Anthropic", r.status, j);
     text = (j.content ?? []).filter((c: { type: string }) => c.type === "text").map((c: { text: string }) => c.text).join("");
     tin = j.usage?.input_tokens ?? 0; tout = j.usage?.output_tokens ?? 0;
   } else {
@@ -38,7 +39,7 @@ export async function chat(o: ChatOpts): Promise<string> {
       }),
     });
     const j = await r.json();
-    if (!r.ok) throw new Error(`OpenAI : ${j?.error?.message ?? r.status}`);
+    if (!r.ok) throw apiError("OpenAI", r.status, j);
     text = j.choices?.[0]?.message?.content ?? "";
     tin = j.usage?.prompt_tokens ?? 0; tout = j.usage?.completion_tokens ?? 0;
   }

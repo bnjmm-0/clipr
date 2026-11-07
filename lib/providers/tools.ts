@@ -4,6 +4,7 @@ import { getSettings, requireCredential } from "../settings";
 import { priceOf, recordUsage } from "../usage";
 import { TOOL_APPS, withStyle } from "../ai-tools";
 import { download, replicateRun } from "./media";
+import { apiError } from "./errors";
 
 const OPENAI = () => process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1";
 const ELEVEN = "https://api.elevenlabs.io/v1";
@@ -24,7 +25,7 @@ export async function runTool(toolId: string, input: Record<string, string>, bas
       body: JSON.stringify({ model: t.model, prompt, size: input.format, quality: input.quality, n: 1 }),
     });
     const j = await r.json();
-    if (!r.ok) throw new Error(`OpenAI Images : ${j?.error?.message ?? r.status}`);
+    if (!r.ok) throw apiError("OpenAI", r.status, j);
     const out = `${base}.png`, d = j.data?.[0];
     if (d?.b64_json) fs.writeFileSync(out, Buffer.from(d.b64_json, "base64"));
     else if (d?.url) await download(d.url, out);
@@ -39,7 +40,7 @@ export async function runTool(toolId: string, input: Record<string, string>, bas
       method: "POST", headers: { "xi-api-key": key, "content-type": "application/json" },
       body: JSON.stringify({ text: input.prompt, model_id: input.model_id || "eleven_multilingual_v2", voice_settings: { stability: Number(input.stability), similarity_boost: 0.75, speed: Number(input.speed) } }),
     });
-    if (!r.ok) throw new Error(`ElevenLabs : ${(await r.text()).slice(0, 300)}`);
+    if (!r.ok) throw apiError("ElevenLabs", r.status, await r.text());
     const out = `${base}.mp3`;
     fs.writeFileSync(out, Buffer.from(await r.arrayBuffer()));
     await recordUsage({ userId, provider: "elevenlabs", kind: "tts", model: input.model_id, units: (input.prompt ?? "").length, unitLabel: "caractères", costUsd: 0 });

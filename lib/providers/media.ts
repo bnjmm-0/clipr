@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { getSettings, requireCredential } from "../settings";
 import { priceOf, recordUsage } from "../usage";
+import { apiError } from "./errors";
 
 // Texte → image : OpenAI Images ou Replicate (modèle choisi dans Réglages).
 export async function generateImage(prompt: string, outFile: string, userId: string) {
@@ -18,7 +19,7 @@ export async function generateImage(prompt: string, outFile: string, userId: str
     body: JSON.stringify({ model: s.imageModel || "gpt-image-1", prompt, size: "1024x1536", n: 1 }),
   });
   const j = await r.json();
-  if (!r.ok) throw new Error(`OpenAI Images : ${j?.error?.message ?? r.status}`);
+  if (!r.ok) throw apiError("OpenAI", r.status, j);
   const d = j.data?.[0];
   if (d?.b64_json) fs.writeFileSync(outFile, Buffer.from(d.b64_json, "base64"));
   else if (d?.url) await download(d.url, outFile);
@@ -42,7 +43,7 @@ export async function replicateRun(model: string, input: Record<string, unknown>
   const h = { authorization: `Bearer ${key}`, "content-type": "application/json", prefer: "wait" };
   let r = await fetch(`https://api.replicate.com/v1/models/${model}/predictions`, { method: "POST", headers: h, body: JSON.stringify({ input }) });
   let j = await r.json();
-  if (!r.ok) throw new Error(`Replicate : ${j?.detail ?? r.status}`);
+  if (!r.ok) throw apiError("Replicate", r.status, j);
   for (let i = 0; i < 180 && !["succeeded", "failed", "canceled"].includes(j.status); i++) {
     await new Promise((res) => setTimeout(res, 5000));
     r = await fetch(j.urls.get, { headers: h });
