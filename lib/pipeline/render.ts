@@ -24,7 +24,9 @@ export function cropXExpr(keys: Keyframe[], cropW: number, srcW: number) {
 export async function faceTrack(video: string, s: number, e: number): Promise<Keyframe[]> {
   try {
     const script = path.join(process.cwd(), "worker", "facetrack.py");
-    const out = await run("python3", [script, video, String(s), String(e)], { timeoutMs: 120_000 });
+    // OpenCV s'installe dans .venv (voir README) ; sinon le Python du système.
+    const venv = path.join(process.cwd(), ".venv", "bin", "python");
+    const out = await run(fs.existsSync(venv) ? venv : "python3", [script, video, String(s), String(e)], { timeoutMs: 120_000 });
     return JSON.parse(out) as Keyframe[];
   } catch {
     return []; // OpenCV absent ou échec : recadrage centré

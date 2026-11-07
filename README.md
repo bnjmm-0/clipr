@@ -18,8 +18,13 @@ puis les publie sur TikTok. Modules optionnels : texte → image / vidéo et Coa
 
 ## Démarrage local
 
-Prérequis : Node 20+, FFmpeg, Python 3 avec `opencv-python-headless` (suivi du visage ; sans lui, recadrage centré),
-`yt-dlp` facultatif (import par lien).
+Prérequis : Node 20+, FFmpeg, `yt-dlp` (import par lien YouTube, TikTok… et « Reprendre une vidéo »),
+Python 3 avec `opencv-python-headless` (suivi du visage ; sans lui, recadrage centré). Avec [uv](https://docs.astral.sh/uv/) :
+
+```bash
+uv tool install yt-dlp                                        # yt-dlp dans ~/.local/bin
+uv venv .venv && uv pip install --python .venv/bin/python opencv-python-headless   # le worker utilise .venv s'il existe
+```
 
 ```bash
 npm install
