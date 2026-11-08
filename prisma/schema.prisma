@@ -156,6 +156,7 @@ model AppSettings {
   imageProvider String  @default("openai")       // openai | replicate
   imageModel   String   @default("gpt-image-1")
   videoModel   String   @default("")             // slug Replicate, ex. "minimax/video-01"
+  imageQuality String   @default("medium")       // qualité GPT Image : low | medium | high (le prix varie d'environ 1 à 15)
   ttsModel     String   @default("gpt-4o-mini-tts") // voix off des vidéos IA (OpenAI)
   trendRegion  String   @default("FR")
   trendNiche   String   @default("")              // thème du client pour orienter les idées de tendances

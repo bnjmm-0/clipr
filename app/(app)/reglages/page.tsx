@@ -36,6 +36,7 @@ export default async function Settings() {
               <div><label>Voix off (OpenAI)</label><input name="ttsModel" defaultValue={s.ttsModel} /></div>
               <div><label>Images</label><select name="imageProvider" defaultValue={s.imageProvider}><option value="openai">OpenAI</option><option value="replicate">Replicate</option></select></div>
               <div><label>Modèle image</label><input name="imageModel" defaultValue={s.imageModel} /></div>
+              <div><label>Qualité des images (GPT Image)</label><select name="imageQuality" defaultValue={s.imageQuality}><option value="medium">Moyenne · ≈ 0,06 $ l'image (conseillé)</option><option value="high">Haute · ≈ 0,25 $ l'image</option><option value="low">Basse · ≈ 0,02 $ l'image (brouillons)</option></select></div>
               <div><label>Modèle vidéo (Replicate)</label><input name="videoModel" defaultValue={s.videoModel} placeholder="minimax/video-01" /></div>
               <div><label>Minutes offertes à l'inscription</label><input name="freeMinutes" type="number" defaultValue={s.freeMinutes} /></div>
               <div><label>Pays des tendances</label><input name="trendRegion" defaultValue={s.trendRegion} maxLength={2} /></div>

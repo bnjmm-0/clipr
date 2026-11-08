@@ -58,6 +58,7 @@ export async function saveProviders(fd: FormData) {
     data: {
       llmProvider: String(fd.get("llmProvider")), llmModel: String(fd.get("llmModel")).trim(), sttProvider: String(fd.get("sttProvider")),
       imageProvider: String(fd.get("imageProvider")), imageModel: String(fd.get("imageModel")).trim(), videoModel: String(fd.get("videoModel")).trim(),
+      imageQuality: ["low", "medium", "high"].includes(String(fd.get("imageQuality"))) ? String(fd.get("imageQuality")) : "medium",
       freeMinutes: Math.max(0, Number(fd.get("freeMinutes")) || 0), pricesJson: JSON.stringify(prices),
       ttsModel: String(fd.get("ttsModel") || "gpt-4o-mini-tts").trim(), trendRegion: String(fd.get("trendRegion") || "FR").toUpperCase().slice(0, 2), trendNiche: String(fd.get("trendNiche") || "").slice(0, 300),
     },

@@ -20,6 +20,8 @@ export async function generateImage(prompt: string, outFile: string, userId: str
     return outFile;
   }
   const model = engine === "gpt-image" && s.imageProvider !== "openai" ? "gpt-image-1" : s.imageModel || "gpt-image-1";
+  // Qualité choisie dans Réglages (GPT Image seulement) : « moyenne » coûte environ 4 fois moins que « haute ».
+  const quality = model.startsWith("gpt-image") && ["low", "medium", "high"].includes(s.imageQuality) ? s.imageQuality : undefined;
   if (s.imageProvider === "replicate" && engine !== "gpt-image") {
     const url = await replicateRun(s.imageModel || "black-forest-labs/flux-schnell", { prompt, aspect_ratio: "9:16" });
     await download(url, outFile);
@@ -33,12 +35,13 @@ export async function generateImage(prompt: string, outFile: string, userId: str
     // Édition à partir des références : le modèle reprend l'apparence exacte des personnages joints.
     const fd = new FormData();
     fd.append("model", model); fd.append("prompt", prompt); fd.append("size", "1024x1536"); fd.append("n", "1");
+    if (quality) fd.append("quality", quality);
     for (const f of refs) fd.append("image[]", new Blob([fs.readFileSync(f)], { type: "image/png" }), path.basename(f));
     r = await fetch(`${base}/images/edits`, { method: "POST", headers: { authorization: `Bearer ${key}` }, body: fd });
   } else {
     r = await fetch(`${base}/images/generations`, {
       method: "POST", headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-      body: JSON.stringify({ model, prompt, size: "1024x1536", n: 1 }),
+      body: JSON.stringify({ model, prompt, size: "1024x1536", n: 1, ...(quality ? { quality } : {}) }),
     });
   }
   const j = await r.json();
@@ -47,7 +50,7 @@ export async function generateImage(prompt: string, outFile: string, userId: str
   if (d?.b64_json) fs.writeFileSync(outFile, Buffer.from(d.b64_json, "base64"));
   else if (d?.url) await download(d.url, outFile);
   else throw new Error("Aucune image renvoyée");
-  await recordUsage({ userId, provider: "openai", kind: "image", model, units: 1, unitLabel: "image", costUsd: priceOf(`openai:${model}`, s.prices) || 0.04 });
+  await recordUsage({ userId, provider: "openai", kind: "image", model, units: 1, unitLabel: "image", costUsd: (quality ? priceOf(`openai:image:${quality}`, s.prices) : 0) || priceOf(`openai:${model}`, s.prices) || 0.063, meta: { quality } });
   return outFile;
 }
 
@@ -57,7 +60,8 @@ const START_IMAGE: Record<string, string> = { kling: "start_image", veo: "image"
 // Texte → vidéo sur Replicate : moteur de la vidéo (kling, veo, seedance), sinon le modèle de Réglages (ex. minimax/video-01).
 // Pour une scène de vidéo IA : format vertical, sans son (la voix off est posée ensuite), et si possible
 // à partir de l'image de la scène (`startImage`) : le prompt ne décrit alors que le mouvement.
-export async function generateVideo(prompt: string, outFile: string, userId: string, engine?: string | null, startImage?: string) {
+export async function generateVideo(prompt: string, outFile: string, userId: string, engine?: string | null, startImage?: string, seconds = 5) {
+  if (engine === "grok" || engine === "grokpro") return grokVideo(prompt, outFile, userId, engine === "grok" ? "grok-imagine-video-1.5-lite" : "grok-imagine-video-1.5", startImage, seconds);
   const s = await getSettings();
   const model = engine ? TOOL_APPS[engine]?.model : s.videoModel;
   if (!model) throw new Error("Aucun modèle vidéo choisi : renseignez-le dans Réglages.");
@@ -66,6 +70,34 @@ export async function generateVideo(prompt: string, outFile: string, userId: str
   const url = await replicateRun(model, input);
   await download(url, outFile);
   await recordUsage({ userId, provider: "replicate", kind: "video", model, units: 1, unitLabel: "vidéo", costUsd: priceOf("replicate:video", s.prices) });
+  return outFile;
+}
+
+// Grok Imagine (API xAI) : une requête, puis interrogation toutes les 5 s jusqu'à « done ». Payé à la seconde :
+// la durée demandée est celle de la scène (1 à 15 s). Avec une image de départ, le format suit l'image.
+async function grokVideo(prompt: string, outFile: string, userId: string, model: string, startImage?: string, seconds = 5) {
+  const s = await getSettings();
+  const key = await requireCredential("xai");
+  const base = process.env.XAI_BASE_URL ?? "https://api.x.ai/v1";
+  const h = { authorization: `Bearer ${key}`, "content-type": "application/json" };
+  const duration = Math.max(1, Math.min(15, Math.ceil(seconds)));
+  const body: Record<string, unknown> = { model, prompt, duration, resolution: "720p" };
+  if (startImage && fs.existsSync(startImage)) body.image = { url: dataUri(startImage) };
+  else body.aspect_ratio = "9:16";
+  const r = await fetch(`${base}/videos/generations`, { method: "POST", headers: h, body: JSON.stringify(body) });
+  const j = await r.json();
+  if (!r.ok) throw apiError("xAI", r.status, j);
+  let st: { status?: string; video?: { url?: string }; error?: unknown } = {};
+  for (let i = 0; i < 120; i++) {
+    await new Promise((res) => setTimeout(res, 5000));
+    const p = await fetch(`${base}/videos/${j.request_id}`, { headers: h });
+    st = await p.json();
+    if (!p.ok) throw apiError("xAI", p.status, st);
+    if (st.status === "done" || st.status === "failed" || st.status === "expired") break;
+  }
+  if (st.status !== "done" || !st.video?.url) throw new Error(`Grok Imagine : ${st.status === "failed" ? "génération refusée ou échouée" : st.status ?? "délai dépassé"}`);
+  await download(st.video.url, outFile);
+  await recordUsage({ userId, provider: "xai", kind: "video", model, units: duration, unitLabel: "secondes", costUsd: duration * priceOf(`xai:${model}`, s.prices) });
   return outFile;
 }
 

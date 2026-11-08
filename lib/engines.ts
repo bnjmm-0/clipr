@@ -11,8 +11,10 @@ export const IMAGE_ENGINES: Engine[] = [
   { id: "gpt-image", label: "GPT Image (OpenAI)", key: "openai" },
   { id: "flux", label: "FLUX.2 Pro (Replicate)", key: "replicate" },
 ];
-// Identifiants des outils vidéo de lib/ai-tools.ts (modèle et paramètres Replicate).
+// Grok Imagine passe par l'API xAI ; les autres sont les outils vidéo de lib/ai-tools.ts (modèle et paramètres Replicate).
 export const VIDEO_ENGINES: Engine[] = [
+  { id: "grok", label: "Grok Imagine Lite (le moins cher)", key: "xai" },
+  { id: "grokpro", label: "Grok Imagine 1.5", key: "xai" },
   { id: "kling", label: "Kling 3.0", key: "replicate" },
   { id: "veo", label: "Veo 3.1", key: "replicate" },
   { id: "seedance", label: "Seedance 2.0", key: "replicate" },

@@ -13,7 +13,14 @@ export const DEFAULT_PRICES: Record<string, { price: number; per: string }> = {
   "anthropic:claude-sonnet-5-5:out": { price: 15, per: "1M tokens" },
   "openai:whisper-1": { price: 0.006, per: "minute" },
   "groq:whisper-large-v3-turbo": { price: 0.04 / 60, per: "minute" },
-  "openai:gpt-image-1": { price: 0.04, per: "image" },
+  "openai:gpt-image-1": { price: 0.063, per: "image" },
+  // Prix d'une image 1024×1536 selon la qualité (tarif OpenAI, à vérifier sur leur page).
+  "openai:image:low": { price: 0.016, per: "image" },
+  "openai:image:medium": { price: 0.063, per: "image" },
+  "openai:image:high": { price: 0.25, per: "image" },
+  // Grok Imagine (xAI), payé à la seconde de vidéo produite (tarifs « à partir de » de xAI, à vérifier).
+  "xai:grok-imagine-video-1.5-lite": { price: 0.02, per: "seconde" },
+  "xai:grok-imagine-video-1.5": { price: 0.08, per: "seconde" },
   "openai:gpt-4o-mini-tts": { price: 0.015, per: "minute" },
   "openai:tts-1": { price: 0.015 * 1.5, per: "minute" },
   "replicate:image": { price: 0.03, per: "image" },

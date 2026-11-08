@@ -1,4 +1,4 @@
-// Faux serveur d'IA pour tester Clipr sans clé ni coût : imite OpenAI, Anthropic, ElevenLabs et Replicate.
+// Faux serveur d'IA pour tester Clipr sans clé ni coût : imite OpenAI, Anthropic, Groq, ElevenLabs, Replicate et xAI.
 // Lancer `npm run mock:ai` puis, dans un autre terminal, `npm run worker:mock` (worker branché sur ce serveur).
 // Les réponses sont fabriquées avec FFmpeg (sons, dégradés, mires) ; les appels reçus s'affichent dans la console.
 import http from "node:http";
@@ -53,7 +53,7 @@ http.createServer(async (req, res) => {
   const buf = await body(req);
   const url = req.url.replace(/^\/v1/, "");
   if (url.startsWith("/files/")) { res.writeHead(200); return res.end(fs.readFileSync(path.join(dir, path.basename(url)))); }
-  const who = req.headers["x-api-key"] ? "anthropic" : req.headers["xi-api-key"] ? "elevenlabs" : url.startsWith("/models/") ? "replicate" : "openai";
+  const who = req.headers["x-api-key"] ? "anthropic" : req.headers["xi-api-key"] ? "elevenlabs" : url.startsWith("/models/") ? "replicate" : url.startsWith("/videos") ? "xai" : "openai";
   log(who, req.method, url);
   if (!(req.headers.authorization ?? req.headers["x-api-key"] ?? req.headers["xi-api-key"])) return json(res, { error: { message: "no key" } }, 401);
   if (url === "/chat/completions") {
@@ -89,6 +89,14 @@ http.createServer(async (req, res) => {
     log("  références jointes :", fd.getAll("image[]").length);
     return json(res, { data: [{ b64_json: picture(`gradients=s=1024x1536:c0=0x2a0a12:c1=0xff4d6d:seed=${n}`).toString("base64") }] });
   }
+  // xAI Grok Imagine : création de la vidéo puis interrogation de son état.
+  if (url === "/videos/generations") {
+    const b = JSON.parse(buf.toString()), name = `grok_${++n}.mp4`;
+    ff("-f", "lavfi", "-i", `testsrc2=s=720x1280:r=24:d=${b.duration ?? 8}`, "-pix_fmt", "yuv420p", path.join(dir, name));
+    log("  grok", b.model, JSON.stringify({ duration: b.duration, resolution: b.resolution, aspect_ratio: b.aspect_ratio, image: b.image ? "<image>" : undefined, prompt: String(b.prompt).slice(0, 50) }));
+    return json(res, { request_id: name });
+  }
+  if (url.startsWith("/videos/")) return json(res, { status: "done", video: { url: `http://127.0.0.1:4010/v1/files/${path.basename(url)}` } });
   if (url.startsWith("/models/") && url.endsWith("/predictions")) {
     const b = JSON.parse(buf.toString()), model = url.slice(8, -12), video = !/flux/.test(model);
     const name = `rep_${++n}.${video ? "mp4" : "png"}`;

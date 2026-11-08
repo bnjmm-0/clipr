@@ -185,7 +185,7 @@ export async function processEpisode(episodeId: string) {
       if (ep.visualMode === "video") {
         const raw = path.join(dir, `raw_${i}.mp4`);
         const motion = sc.motion || `${sc.visual}. Slow push-in, the characters move naturally. Keep everything exactly as in the starting image. No text, no logo.`;
-        if (!fs.existsSync(raw)) await generateVideo(motion, raw, ep.userId, ep.engineVideo, img);
+        if (!fs.existsSync(raw)) await generateVideo(motion, raw, ep.userId, ep.engineVideo, img, dur);
         await run("ffmpeg", ["-y", "-v", "error", "-stream_loop", "-1", "-i", raw, "-t", dur.toFixed(2), "-an",
           "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30,setsar=1", "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", part]);
       } else {

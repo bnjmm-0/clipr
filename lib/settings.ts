@@ -5,6 +5,7 @@ export const CREDENTIALS = [
   { name: "openai", label: "OpenAI", help: "LLM (scoring, Coach), transcription Whisper, images", url: "https://platform.openai.com/api-keys" },
   { name: "anthropic", label: "Anthropic (Claude)", help: "LLM alternatif pour le scoring et le Coach", url: "https://console.anthropic.com/settings/keys" },
   { name: "groq", label: "Groq", help: "Transcription Whisper rapide et peu chère (alternative à OpenAI)", url: "https://console.groq.com/keys" },
+  { name: "xai", label: "xAI (Grok Imagine)", help: "Plans vidéo animés à partir des images des scènes, peu chers (payés à la seconde)", url: "https://console.x.ai" },
   { name: "replicate", label: "Replicate", help: "Génération d'images et de vidéos (modèles au choix)", url: "https://replicate.com/account/api-tokens" },
   { name: "tiktok_client_key", label: "TikTok — Client key", help: "De l'app développeur TikTok créée sous votre compte", url: "https://developers.tiktok.com/apps" },
   { name: "tiktok_client_secret", label: "TikTok — Client secret", help: "De la même app développeur TikTok", url: "https://developers.tiktok.com/apps" },

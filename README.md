@@ -120,6 +120,10 @@ script (GPT ou Claude), voix off (voix OpenAI ou voix du compte ElevenLabs), vis
 vidéo Kling 3.0, Veo 3.1, Seedance 2.0 via Replicate) et images (GPT Image ou FLUX.2 Pro). Par défaut : les
 choix de Réglages ; une IA sans clé est grisée. Une série garde ses choix pour tous ses épisodes.
 Code : `lib/engines.ts`, `components/EngineFields.tsx`, `readEngines` dans `app/actions.ts`.
+Plans vidéo Grok Imagine (clé xAI, `console.x.ai`) : « Grok Imagine Lite » (`grok-imagine-video-1.5-lite`,
+environ 0,02 $/s) ou « Grok Imagine 1.5 » (environ 0,08 $/s), en 720p, à partir de l'image de chaque scène et pour
+exactement sa durée (1 à 15 s) ; API `POST /v1/videos/generations` puis `GET /v1/videos/{request_id}`.
+Qualité des images GPT Image dans Réglages : basse, moyenne (par défaut, environ 0,06 $) ou haute (environ 0,25 $).
 Après mise à jour : `npx prisma db push` (nouveaux champs), puis relancer `npm run dev` et `npm run worker`.
 
 Tests sans clé ni coût : `npm run mock:ai` lance un faux serveur qui imite OpenAI, Anthropic, Groq,
