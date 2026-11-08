@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { getSettings, requireCredential } from "../settings";
 import { priceOf, recordUsage } from "../usage";
 import { apiError } from "./errors";
@@ -5,6 +6,7 @@ import { apiError } from "./errors";
 export type ChatOpts = {
   system: string; user: string; json?: boolean; maxTokens?: number; userId?: string | null; purpose?: string;
   provider?: "openai" | "anthropic"; model?: string; // par défaut : ceux de Réglages
+  images?: string[]; // images JPEG jointes au message (analyse visuelle : GPT-4o, Claude)
 };
 
 // Appel LLM via la clé du client (OpenAI ou Anthropic selon Réglages). Retourne le texte.
@@ -20,7 +22,7 @@ export async function chat(o: ChatOpts): Promise<string> {
       headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
       body: JSON.stringify({
         model, max_tokens: o.maxTokens ?? 2000, system: o.system + (o.json ? "\nRéponds uniquement avec du JSON valide, sans texte autour." : ""),
-        messages: [{ role: "user", content: o.user }],
+        messages: [{ role: "user", content: o.images?.length ? [...o.images.map((f) => ({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: fs.readFileSync(f).toString("base64") } })), { type: "text", text: o.user }] : o.user }],
       }),
     });
     const j = await r.json();
@@ -35,7 +37,7 @@ export async function chat(o: ChatOpts): Promise<string> {
       body: JSON.stringify({
         model, max_completion_tokens: o.maxTokens ?? 2000,
         ...(o.json ? { response_format: { type: "json_object" } } : {}),
-        messages: [{ role: "system", content: o.system }, { role: "user", content: o.user }],
+        messages: [{ role: "system", content: o.system }, { role: "user", content: o.images?.length ? [{ type: "text", text: o.user }, ...o.images.map((f) => ({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${fs.readFileSync(f).toString("base64")}`, detail: "low" } }))] : o.user }],
       }),
     });
     const j = await r.json();

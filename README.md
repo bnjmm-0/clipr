@@ -101,6 +101,18 @@ le jaune des sous-titres, et le « mot actif » comme signature.
 - Statistiques : « pépites » (vidéos à 5 × les vues habituelles, médiane du compte) et rythme de publication ;
   le Coach TikTok suit les mêmes règles de stratégie.
 
+## Inspiration fruits IA (`/inspiration`)
+
+- Toutes les 12 h (worker, tâche `inspiration`, si « Vidéos IA et séries » est activée et la clé YouTube présente),
+  6 recherches YouTube de Shorts « fruits IA » des 60 derniers jours (100 unités de quota chacune, environ 610 en
+  tout, comptées dans Usage). Gardées : vidéos de 3 min au plus qui parlent d'IA. Classement par surperformance
+  (vues / abonnés de la chaîne, au moins 1 000) ou vues par jour.
+- « Analyser cette vidéo » (tâche `inspiration_analyze`) : yt-dlp récupère les sous-titres et la vidéo en 480p
+  (supprimée ensuite) ; à défaut de sous-titres, le son est transcrit ; 4 images sont jointes au modèle de texte
+  (GPT ou Claude, qui voient les images). Résultat partagé entre utilisateurs (`analysisJson`).
+- « Refaire dans Clipr » crée les personnages de la recette (avec leur fiche) et ouvre le formulaire de vidéo IA
+  pré-rempli (consigne d'une version originale, format, durée, options).
+
 ## IA au choix pour chaque vidéo
 
 Les formulaires (Vidéos IA, série, Reprendre une vidéo, Nouveau projet de clips) proposent l'IA à utiliser :

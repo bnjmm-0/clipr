@@ -358,6 +358,43 @@ export async function rewriteEpisode(id: string) {
   revalidatePath(`/videos-ia/${id}`);
 }
 
+// ——— Inspiration : vidéos fruits IA qui marchent ———
+export async function refreshInspirationNow() {
+  await requireUser();
+  const busy = await prisma.job.count({ where: { type: "inspiration", state: { in: ["queued", "running"] } } });
+  if (!busy) await enqueue("inspiration", {});
+  revalidatePath("/inspiration");
+}
+
+// Analyse « comment elle a été faite » (une fois par vidéo, partagée entre utilisateurs).
+export async function analyzeInspirationVideo(id: string) {
+  const u = await requireUser();
+  const v = await prisma.inspirationVideo.findUnique({ where: { id } });
+  if (!v) return;
+  const busy = await prisma.job.count({ where: { type: "inspiration_analyze", state: { in: ["queued", "running"] }, payload: { contains: id } } });
+  if (!busy) await enqueue("inspiration_analyze", { videoId: id, userId: u.id });
+  revalidatePath(`/inspiration/${id}`);
+}
+
+// Refaire dans Clipr : crée les personnages de la recette (s'ils n'existent pas déjà), puis ouvre le formulaire pré-rempli.
+export async function remakeFromInspiration(id: string) {
+  const u = await requireUser();
+  const v = await prisma.inspirationVideo.findUnique({ where: { id } });
+  if (!v?.analysisJson) return;
+  const r = (JSON.parse(v.analysisJson) as import("@/lib/inspiration").Analysis).recette;
+  const cast: string[] = [];
+  for (const c of r.characters) {
+    let ch = await prisma.character.findFirst({ where: { userId: u.id, name: c.name } });
+    if (!ch) {
+      ch = await prisma.character.create({ data: { userId: u.id, name: c.name, look: c.look, personality: c.personality, voice: VOICES[cast.length % VOICES.length], visualStyle: "3D hyperréaliste façon film d'animation" } });
+      await enqueue("character_ref", { characterId: ch.id });
+    }
+    cast.push(ch.id);
+  }
+  const q = new URLSearchParams({ idee: r.brief, format: r.format, duree: String(r.durationSec), opts: JSON.stringify(r.options), cast: cast.join(","), source: id });
+  redirect(`/videos-ia?${q}`);
+}
+
 // ——— Validation du storyboard (vidéos IA avec « valider avant la vidéo ») ———
 async function ownEpisodeInReview(id: string) {
   const u = await requireUser();

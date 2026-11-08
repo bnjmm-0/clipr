@@ -22,6 +22,14 @@ let n = 0;
 function answer(user, wantJson) {
   const opt = user.indexOf("Options de création");
   if (opt >= 0) log("  options reçues :", user.slice(opt, opt + 700).split("\n").slice(1).join(" | "));
+  if (/"recette"/.test(user)) return JSON.stringify({
+    resume: "Deux fruits se disputent au bord d'une piscine ; la banane avoue tout à la fin.", format: "Dialogue entre personnages, gros plans", accroche: "Une gifle dès la première seconde",
+    structure: [{ moment: "0-2 s", quoi: "La fraise gifle la banane" }, { moment: "2-10 s", quoi: "Dispute en champ-contrechamp" }, { moment: "10-15 s", quoi: "Révélation et cliffhanger" }],
+    personnages: [{ nom: "Fraise", apparence: "Fraise brillante, grands yeux, lunettes roses", personnalite: "Jalouse" }, { nom: "Banane", apparence: "Banane musclée, chaîne dorée", personnalite: "Menteur" }],
+    style: "3D hyperréaliste, golden hour", voix: "Voix françaises expressives", montage: "Plans de 2 s, sous-titres jaunes", outils: "Probablement un générateur d'images puis d'animation", pourquoi: ["Conflit immédiat", "Fin ouverte"],
+    recette: { brief: "Un ananas jaloux découvre que la pastèque sort avec le melon", format: "dialogue", durationSec: 30, options: { genre: "drame", hook: "medias", ending: "cliffhanger", rhythm: "rapide", setting: "villa avec piscine", light: "golden", style: "3d", framing: "serre", inconnu: "x" },
+      characters: [{ name: "Ananas", look: "Ananas anthropomorphe, couronne de feuilles, sourcils froncés", personality: "Jaloux, dramatique" }, { name: "Pastèque", look: "Pastèque ronde, sourire malicieux", personality: "Charmeuse" }] },
+  });
   if (/donne un score de 0 à 100/.test(user)) {
     const ids = [...user.matchAll(/^#(\d+) \[/gm)].map((m) => Number(m[1]));
     return JSON.stringify({ clips: ids.map((id) => ({ id, score: 50 + ((id * 37) % 50), title: `Moment fort n°${id}`, reason: "Accroche claire et fin nette." })) });
@@ -49,8 +57,11 @@ http.createServer(async (req, res) => {
   log(who, req.method, url);
   if (!(req.headers.authorization ?? req.headers["x-api-key"] ?? req.headers["xi-api-key"])) return json(res, { error: { message: "no key" } }, 401);
   if (url === "/chat/completions") {
-    const b = JSON.parse(buf.toString());
-    return json(res, { choices: [{ message: { content: answer(b.messages.at(-1).content, b.response_format?.type === "json_object") } }], usage: { prompt_tokens: 900, completion_tokens: 300 } });
+    const b = JSON.parse(buf.toString()), c = b.messages.at(-1).content;
+    // Message avec images jointes : le texte est dans une des parties.
+    const text = Array.isArray(c) ? c.filter((p) => p.type === "text").map((p) => p.text).join("\n") : c;
+    if (Array.isArray(c)) log("  images jointes au message :", c.filter((p) => p.type === "image_url").length);
+    return json(res, { choices: [{ message: { content: answer(text, b.response_format?.type === "json_object") } }], usage: { prompt_tokens: 900, completion_tokens: 300 } });
   }
   if (url === "/messages") {
     const b = JSON.parse(buf.toString());

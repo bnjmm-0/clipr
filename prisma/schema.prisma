@@ -348,3 +348,25 @@ model CoachReport {
   output    String
   createdAt DateTime @default(now())
 }
+
+// Vidéos « fruits IA » qui marchent sur YouTube (page Inspiration), relevées toutes les 12 h.
+// analysisJson : « comment elle a été faite », calculé à la demande et partagé entre utilisateurs.
+model InspirationVideo {
+  id           String    @id // identifiant YouTube
+  title        String
+  channel      String
+  channelId    String
+  channelSubs  Int       @default(0)
+  thumb        String
+  description  String    @default("")
+  tags         String    @default("")
+  query        String    // recherche qui l'a trouvée
+  durationSec  Int
+  views        Int
+  likes        Int       @default(0)
+  comments     Int       @default(0)
+  publishedAt  DateTime
+  fetchedAt    DateTime  @default(now())
+  analysisJson String?
+  analyzedAt   DateTime?
+}

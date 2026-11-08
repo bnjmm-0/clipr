@@ -11,7 +11,8 @@ import { ytPublishShort } from "../lib/providers/youtube";
 import { ensureCharacterRef, processEpisode } from "../lib/pipeline/episode";
 import { refreshTrends, REFRESH_HOURS } from "../lib/trends";
 import { snapshotUser } from "../lib/stats";
-import { featureEnabled } from "../lib/settings";
+import { featureEnabled, getCredential } from "../lib/settings";
+import { INSPIRATION_HOURS, analyzeInspiration, refreshInspiration } from "../lib/inspiration";
 import { genDir } from "../lib/storage";
 
 const MAX_ATTEMPTS = 3;
@@ -38,6 +39,8 @@ async function handle(job: { id: string; type: string; payload: string; projectI
       return;
     }
     case "trends": await refreshTrends(); return;
+    case "inspiration": await refreshInspiration(); return;
+    case "inspiration_analyze": await analyzeInspiration(p.videoId, p.userId); return;
     case "stats": await snapshotUser(p.userId); return;
     case "publish": {
       const pub = await prisma.publication.findUniqueOrThrow({ where: { id: p.publicationId }, include: { clip: { include: { project: true } }, episode: true } });
@@ -97,6 +100,11 @@ async function periodic() {
   if (await featureEnabled("trends")) {
     const last = await prisma.trendSnapshot.findFirst({ orderBy: { createdAt: "desc" } });
     if ((!last || last.createdAt < due) && !(await pending("trends"))) await prisma.job.create({ data: { type: "trends" } });
+  }
+  // Inspiration (vidéos fruits IA qui marchent) : relevé YouTube toutes les 12 h si la clé YouTube est là.
+  if ((await featureEnabled("aiVideos")) && (await getCredential("youtube").catch(() => null))) {
+    const last = await prisma.inspirationVideo.findFirst({ orderBy: { fetchedAt: "desc" } });
+    if ((!last || last.fetchedAt < new Date(Date.now() - INSPIRATION_HOURS * 36e5)) && !(await pending("inspiration"))) await prisma.job.create({ data: { type: "inspiration" } });
   }
   if (await featureEnabled("stats")) {
     const users = await prisma.socialAccount.findMany({ distinct: ["userId"], select: { userId: true } });

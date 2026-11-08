@@ -13,11 +13,15 @@ import { createCharacter, createEpisode, createSeries, deleteCharacter, nextEpis
 const STATUS: Record<string, [string, string]> = { ready: ["Prête", "ok"], failed: ["Échec", "err"], review: ["À valider", "live"] };
 const STYLE_OPTS = <><option value="bold">Pop</option><option value="bounce">Rebond</option><option value="box">Encadré</option><option value="typewriter">Machine à écrire</option></>;
 
-export default async function AiVideos({ searchParams }: { searchParams: Promise<{ idee?: string }> }) {
+export default async function AiVideos({ searchParams }: { searchParams: Promise<{ idee?: string; format?: string; duree?: string; opts?: string; cast?: string; source?: string }> }) {
   const u = await requireUser();
   const s = await getSettings();
   if (!s.features.aiVideos) return <div className="page"><p className="note">Fonction désactivée dans Réglages.</p></div>;
-  const { idee } = await searchParams;
+  const { idee, format, duree, opts, cast, source } = await searchParams;
+  // Pré-remplissage depuis une recette de la page Inspiration (personnages cochés, format, durée, options).
+  const preCast = new Set((cast ?? "").split(",").filter(Boolean));
+  let preOpts: Record<string, string> = {};
+  try { preOpts = opts ? JSON.parse(opts) : {}; } catch { /* lien modifié à la main : options ignorées */ }
   const [characters, series, episodes] = await Promise.all([
     prisma.character.findMany({ where: { userId: u.id }, orderBy: { createdAt: "desc" } }),
     prisma.series.findMany({ where: { userId: u.id }, orderBy: { createdAt: "desc" }, include: { character: true, _count: { select: { episodes: true } } } }),
@@ -34,10 +38,10 @@ export default async function AiVideos({ searchParams }: { searchParams: Promise
   const castPick = characters.length ? (
     <div style={{ gridColumn: "1 / -1" }}><label>Personnages (coche-en plusieurs pour qu'ils se parlent)</label>
       <div className="chips">{characters.map((c) => { const r = refOf(c); return (
-        <label key={c.id}><input type="checkbox" name="cast" value={c.id} /><span>{r.src && <img src={r.src} alt="" className="chipava" />}{c.name}</span></label>
+        <label key={c.id}><input type="checkbox" name="cast" value={c.id} defaultChecked={preCast.has(c.id)} /><span>{r.src && <img src={r.src} alt="" className="chipava" />}{c.name}</span></label>
       ); })}</div></div>
   ) : <p className="xs muted" style={{ gridColumn: "1 / -1", marginTop: 12 }}>Crée tes personnages (à droite) : chacun reçoit une fiche de référence qui le garde identique d'une image à l'autre.</p>;
-  const formatPick = <div><label>Format</label><select name="format" defaultValue="dialogue"><option value="dialogue">Dialogue entre personnages</option><option value="narration">Narration (voix off)</option></select></div>;
+  const formatPick = <div><label>Format</label><select name="format" defaultValue={format === "narration" ? "narration" : "dialogue"}><option value="dialogue">Dialogue entre personnages</option><option value="narration">Narration (voix off)</option></select></div>;
   const reviewBox = <label className="check" style={{ marginTop: 16 }}><input type="checkbox" name="review" defaultChecked /><span className="small">Valider le script et les images avant de créer la vidéo (recommandé : la voix et l'animation sont la partie la plus chère)</span></label>;
   return (
     <div className="page">
@@ -48,9 +52,10 @@ export default async function AiVideos({ searchParams }: { searchParams: Promise
         <div className="stack-24">
           <form action={createEpisode} className="panel">
             <h2>Nouvelle vidéo</h2>
+            {source && <p className="note" style={{ marginTop: 12 }}>Pré-rempli avec la recette d'une vidéo qui marche : relis la consigne, coche ou décoche les personnages, puis génère. Les personnages créés reçoivent leur fiche en arrière-plan.</p>}
             <label>Sujet ou consigne</label>
             <textarea name="brief" rows={3} required defaultValue={idee ?? ""} placeholder="Ex. La fraise découvre que la banane l'a trompée avec le kiwi pendant la soirée piscine" />
-            <DurationField />
+            <DurationField defaultValue={Math.max(15, Math.min(600, Number(duree) || 60))} />
             <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: "0 12px" }}>
               {castPick}
               {formatPick}
@@ -58,9 +63,9 @@ export default async function AiVideos({ searchParams }: { searchParams: Promise
               <div><label>Langue</label><select name="language"><option value="fr">Français</option><option value="en">Anglais</option><option value="es">Espagnol</option><option value="ar">Arabe</option></select></div>
               <EngineFields />
             </div>
-            <StoryOptionsFields id="ep" open />
+            <StoryOptionsFields id="ep" open defaults={preOpts} />
             {reviewBox}
-            <input type="hidden" name="origin" value={idee ? "trend" : "manual"} />
+            <input type="hidden" name="origin" value={source ? "manual" : idee ? "trend" : "manual"} />
             <button className="btn accent" style={{ marginTop: 20 }}>Générer la vidéo</button>
             <p className="xs muted" style={{ marginTop: 12 }}>Coût indicatif : une image et quelques secondes de voix par scène. Le détail apparaît dans Usage.</p>
           </form>
