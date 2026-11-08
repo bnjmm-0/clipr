@@ -10,6 +10,7 @@ import { faceTrack, renderClip } from "./render";
 import { getSettings } from "../settings";
 import { makeCover } from "./cover";
 import { scheduleAuto } from "../autopublish";
+import { scriptModel } from "../engines";
 
 const stage = (id: string, s: string, progress: number) =>
   prisma.project.update({ where: { id }, data: { stage: s, progress, status: "processing" } });
@@ -78,10 +79,11 @@ export async function processProject(projectId: string) {
     const cands = buildCandidates(segments, p.minClipSec, p.maxClipSec);
     if (!cands.length) cands.push({ id: 1, s: segments[0].s, e: Math.min(segments.at(-1)!.e, segments[0].s + p.maxClipSec), text: segments.map((g) => g.text).join(" ") });
     const scored: Scored[] = [];
+    const llm = scriptModel(p.engineScript, await getSettings());
     for (let i = 0; i < cands.length; i += 30) {
       const batch = cands.slice(i, i + 30);
       const out = await chat({
-        userId: p.userId, purpose: "scoring", json: true, maxTokens: 3000,
+        userId: p.userId, purpose: "scoring", json: true, maxTokens: 3000, ...llm,
         system: "Tu es un éditeur vidéo expert des formats courts (TikTok, Reels, Shorts). Tu notes des extraits de transcription pour savoir lesquels feront de bons clips viraux.",
         user: `Langue de la vidéo : ${p.language}. Pour chaque extrait, donne un score de 0 à 100 selon : accroche des 3 premières secondes, émotion ou surprise, compréhensible sans contexte, fin nette. Donne aussi un titre accrocheur court (max 60 caractères, dans la langue de la vidéo) et une raison en une phrase.
 Réponds en JSON : {"clips":[{"id":1,"score":80,"title":"...","reason":"..."}]}

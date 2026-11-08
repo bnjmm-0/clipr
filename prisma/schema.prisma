@@ -59,6 +59,12 @@ model Series {
   durationSec Int       @default(60)
   language    String    @default("fr")
   captionStyle String   @default("bold")
+  visualMode  String   @default("image")
+  // IA choisies pour cette vidéo (vides = celles de Réglages) : voir lib/engines.ts.
+  engineScript String?  // gpt | claude
+  voice       String?   // voix OpenAI (ex. "coral") ou "elevenlabs:<id de voix>"
+  engineImage String?   // gpt-image | flux
+  engineVideo String?   // kling | veo | seedance
   createdAt   DateTime  @default(now())
   episodes    Episode[]
 }
@@ -78,6 +84,11 @@ model Episode {
   durationSec Int      @default(60)
   captionStyle String  @default("bold")
   visualMode  String   @default("image") // image (images animées) | video (modèle vidéo Replicate)
+  // IA choisies pour cette vidéo (vides = celles de Réglages) : voir lib/engines.ts.
+  engineScript String?  // gpt | claude
+  voice       String?   // voix OpenAI (ex. "coral") ou "elevenlabs:<id de voix>"
+  engineImage String?   // gpt-image | flux
+  engineVideo String?   // kling | veo | seedance
   language    String   @default("fr")
   characterId String?  // personnage utilisé hors série
   scriptJson  String?  // {title, hook, scenes:[{narration, visual}], summary}
@@ -168,6 +179,7 @@ model Project {
   clipCount    Int      @default(6)
   captionStyle String   @default("bold")
   cropMode     String   @default("center") // center | wide
+  engineScript String?  // IA qui choisit les moments forts : gpt | claude (vide = Réglages)
   error        String?
   rightsAccepted Boolean @default(false)
   createdAt    DateTime @default(now())

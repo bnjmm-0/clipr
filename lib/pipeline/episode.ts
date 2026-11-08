@@ -10,6 +10,8 @@ import { transcribeFile, type Word } from "../providers/stt";
 import { renderClip } from "./render";
 import { makeCover } from "./cover";
 import { scheduleAuto } from "../autopublish";
+import { getSettings } from "../settings";
+import { scriptModel } from "../engines";
 
 export type Script = { title: string; hook: string; summary: string; scenes: { narration: string; visual: string }[] };
 
@@ -73,7 +75,7 @@ export async function writeScript(episodeId: string): Promise<Script> {
   }
   if (character) context += `\nPersonnage principal : ${character.name}. Apparence : ${character.look}. Personnalité : ${character.personality || "à ta guise"}.`;
   const out = await chat({
-    userId: ep.userId, purpose: "script vidéo IA", json: true, maxTokens: Math.min(12000, 1500 + n * 160),
+    userId: ep.userId, purpose: "script vidéo IA", json: true, maxTokens: Math.min(12000, 1500 + n * 160), ...scriptModel(ep.engineScript, await getSettings()),
     system: "Tu es scénariste de vidéos verticales courtes (TikTok, Reels, Shorts). Accroche forte dans les 3 premières secondes, phrases courtes à l'oral, une idée par scène, chute nette.",
     user: `Langue : ${ep.language}. Durée visée : ${ep.durationSec} s, environ ${words} mots de narration au total, en ${n} scènes.
 Consigne : ${ep.brief}${context}
@@ -107,7 +109,7 @@ export async function processEpisode(episodeId: string) {
     const sc = script.scenes[i];
     const voice = path.join(dir, `voice_${i}.mp3`);
     await stage(ep.id, `voix et visuels ${i + 1}/${n}`, 10 + Math.round((70 * i) / n));
-    if (!fs.existsSync(voice)) await speak(sc.narration, character?.voice ?? "alloy", voice, ep.userId, "Ton dynamique de créateur de contenu, rythme soutenu.");
+    if (!fs.existsSync(voice)) await speak(sc.narration, ep.voice || character?.voice || "alloy", voice, ep.userId, "Ton dynamique de créateur de contenu, rythme soutenu.");
     const dur = (await probe(voice)).duration + 0.12;
     words.push(...timeWords(sc.narration, t, dur - 0.12));
     const part = path.join(dir, `scene_${i}.mp4`);
@@ -115,12 +117,12 @@ export async function processEpisode(episodeId: string) {
       const prompt = `${sc.visual}. Vertical 9:16 composition, no text, no watermark.`;
       if (ep.visualMode === "video") {
         const raw = path.join(dir, `raw_${i}.mp4`);
-        if (!fs.existsSync(raw)) await generateVideo(prompt, raw, ep.userId);
+        if (!fs.existsSync(raw)) await generateVideo(prompt, raw, ep.userId, ep.engineVideo);
         await run("ffmpeg", ["-y", "-v", "error", "-stream_loop", "-1", "-i", raw, "-t", dur.toFixed(2), "-an",
           "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30,setsar=1", "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", part]);
       } else {
         const img = path.join(dir, `img_${i}.png`);
-        if (!fs.existsSync(img)) await generateImage(prompt, img, ep.userId);
+        if (!fs.existsSync(img)) await generateImage(prompt, img, ep.userId, ep.engineImage);
         const frames = Math.ceil(dur * 30);
         // Mouvement de caméra lent (zoom avant, zoom arrière ou travelling) qui change à chaque scène.
         const moves = [

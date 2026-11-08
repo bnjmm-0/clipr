@@ -2,9 +2,10 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
-import { VOICES } from "@/lib/providers/tts";
 import Poller from "@/components/Poller";
 import DurationField from "@/components/DurationField";
+import EngineFields, { VoiceOptions } from "@/components/EngineFields";
+import { isElevenVoice } from "@/lib/engines";
 import { createCharacter, createEpisode, createSeries, deleteCharacter, nextEpisode } from "@/app/actions";
 
 const STATUS: Record<string, [string, string]> = { ready: ["Prête", "ok"], failed: ["Échec", "err"] };
@@ -21,7 +22,6 @@ export default async function AiVideos({ searchParams }: { searchParams: Promise
     prisma.episode.findMany({ where: { userId: u.id }, orderBy: { createdAt: "desc" }, take: 40, include: { series: true } }),
   ]);
   const charOpts = <><option value="">Sans personnage</option>{characters.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</>;
-  const visualOpts = <><option value="image">Images animées (moins cher)</option><option value="video" disabled={!s.videoModel}>Plans vidéo IA{s.videoModel ? "" : " (choisir un modèle dans Réglages)"}</option></>;
   return (
     <div className="page">
       <Poller active={episodes.some((e) => ["queued", "processing"].includes(e.status))} ms={4000} />
@@ -36,9 +36,9 @@ export default async function AiVideos({ searchParams }: { searchParams: Promise
             <DurationField />
             <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: "0 12px" }}>
               <div><label>Personnage</label><select name="characterId">{charOpts}</select></div>
-              <div><label>Visuels</label><select name="visualMode">{visualOpts}</select></div>
               <div><label>Sous-titres</label><select name="captionStyle">{STYLE_OPTS}</select></div>
               <div><label>Langue</label><select name="language"><option value="fr">Français</option><option value="en">Anglais</option><option value="es">Espagnol</option><option value="ar">Arabe</option></select></div>
+              <EngineFields />
             </div>
             <input type="hidden" name="origin" value={idee ? "trend" : "manual"} />
             <button className="btn accent" style={{ marginTop: 20 }}>Générer la vidéo</button>
@@ -79,7 +79,7 @@ export default async function AiVideos({ searchParams }: { searchParams: Promise
                 <label>Personnage</label><select name="characterId">{charOpts}</select>
                 <DurationField />
                 <label>Sous-titres</label><select name="captionStyle">{STYLE_OPTS}</select>
-                <label>Visuels</label><select name="visualMode">{visualOpts}</select>
+                <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: "0 12px" }}><EngineFields /></div>
                 <label className="check" style={{ marginTop: 16 }}><input type="checkbox" name="startNow" defaultChecked /><span className="small">Générer l'épisode 1 tout de suite</span></label>
                 <button className="btn sm" style={{ marginTop: 16 }}>Créer la série</button>
               </form>
@@ -91,7 +91,7 @@ export default async function AiVideos({ searchParams }: { searchParams: Promise
             <p className="xs muted" style={{ marginTop: 4 }}>Humain, animal, objet, mascotte : l'apparence est reprise dans chaque image.</p>
             {characters.map((c) => (
               <div key={c.id} className="raised" style={{ padding: 12, marginTop: 12 }}>
-                <div className="row"><h3 style={{ flex: 1 }}>{c.name}</h3><span className="xs muted">voix {c.voice}</span>
+                <div className="row"><h3 style={{ flex: 1 }}>{c.name}</h3><span className="xs muted">voix {isElevenVoice(c.voice) ? "ElevenLabs" : c.voice}</span>
                   <form action={deleteCharacter.bind(null, c.id)}><button className="btn quiet sm">Supprimer</button></form></div>
                 <p className="xs sec" style={{ marginTop: 4 }}>{c.look}</p>
               </div>
@@ -103,7 +103,7 @@ export default async function AiVideos({ searchParams }: { searchParams: Promise
                 <label>Apparence (en détail, elle sert à chaque image)</label><textarea name="look" rows={3} required placeholder="Homme de 35 ans, barbe courte, sweat gris, salle de sport industrielle" />
                 <label>Personnalité</label><input name="personality" placeholder="Direct, drôle, bienveillant" />
                 <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: "0 12px" }}>
-                  <div><label>Voix</label><select name="voice">{VOICES.map((v) => <option key={v}>{v}</option>)}</select></div>
+                  <div><label>Voix</label><select name="voice" defaultValue="alloy"><VoiceOptions /></select></div>
                   <div><label>Style visuel</label><input name="visualStyle" defaultValue="cinématique réaliste" /></div>
                 </div>
                 <button className="btn sm" style={{ marginTop: 16 }}>Créer le personnage</button>

@@ -12,7 +12,7 @@ export async function transcribeFile(file: string, opts: { language?: string; of
   const groq = s.sttProvider === "groq";
   const key = await requireCredential(groq ? "groq" : "openai");
   const model = groq ? "whisper-large-v3-turbo" : "whisper-1";
-  const url = groq ? "https://api.groq.com/openai/v1/audio/transcriptions" : `${process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1"}/audio/transcriptions`;
+  const url = groq ? `${process.env.GROQ_BASE_URL ?? "https://api.groq.com/openai/v1"}/audio/transcriptions` : `${process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1"}/audio/transcriptions`;
   const fd = new FormData();
   fd.append("file", new Blob([fs.readFileSync(file)], { type: "audio/mpeg" }), "audio.mp3");
   fd.append("model", model);

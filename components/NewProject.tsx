@@ -24,7 +24,8 @@ function platformOf(url: string) {
   } catch { return null; }
 }
 
-export default function NewProject({ defaultUrl }: { defaultUrl?: string }) {
+// `engines` : choix de l'IA qui note les moments forts (EngineFields, rendu côté serveur).
+export default function NewProject({ defaultUrl, engines }: { defaultUrl?: string; engines?: React.ReactNode }) {
   const r = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -135,6 +136,7 @@ export default function NewProject({ defaultUrl }: { defaultUrl?: string }) {
         <div className="row" style={{ justifyContent: "space-between" }}><span className="xs muted">Nombre de clips</span><b className="num countval">{count}</b></div>
         <input type="range" name="clipCount" min={1} max={15} value={count} onChange={(e) => setCount(Number(e.target.value))} aria-label="Nombre de clips" />
       </div>
+      {engines}
 
       <div className="npsec"><span className="num">3</span>Le rendu</div>
       <label>Recadrage vertical</label>

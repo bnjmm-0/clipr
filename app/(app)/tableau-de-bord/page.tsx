@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import NewProject from "@/components/NewProject";
 import AiCardFx from "@/components/AiCardFx";
+import EngineFields from "@/components/EngineFields";
 
 const STATUS: Record<string, [string, string]> = { ready: ["Prêt", "ok"], failed: ["Échec", "err"] };
 
@@ -52,7 +53,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       )}
 
       <div id="nouveau" className="grid" style={{ gridTemplateColumns: "minmax(0,1.1fr) minmax(0,.9fr)", alignItems: "start", gap: 24, scrollMarginTop: 80 }}>
-        <NewProject defaultUrl={url} />
+        <NewProject defaultUrl={url} engines={<EngineFields only={["script"]} scriptLabel="IA qui choisit les moments forts" />} />
         <div className="panel" style={{ padding: "8px 24px" }}>
           <h2 style={{ padding: "16px 0 8px" }}>Projets</h2>
           {projects.length === 0 && (

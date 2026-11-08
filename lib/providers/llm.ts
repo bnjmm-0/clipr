@@ -15,7 +15,7 @@ export async function chat(o: ChatOpts): Promise<string> {
   let text = "", tin = 0, tout = 0;
   if (provider === "anthropic") {
     const key = await requireCredential("anthropic");
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
+    const r = await fetch(`${process.env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com/v1"}/messages`, {
       method: "POST",
       headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
       body: JSON.stringify({

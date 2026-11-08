@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import RemixForm from "@/components/RemixForm";
+import EngineFields from "@/components/EngineFields";
 
 export default async function Remix({ searchParams }: { searchParams: Promise<{ url?: string }> }) {
   const u = await requireUser();
@@ -15,7 +16,7 @@ export default async function Remix({ searchParams }: { searchParams: Promise<{ 
     <div className="page">
       <div className="pagehead"><div><h1>Reprendre une vidéo</h1><p>Clipr transcrit une vidéo qui marche, en analyse la mécanique (accroche, rythme, chute) et écrit ta propre version, doublée et illustrée, à la durée que tu choisis.</p></div></div>
       <div className="grid" style={{ gridTemplateColumns: "minmax(0,1.1fr) minmax(0,.9fr)", gap: 24, alignItems: "start" }}>
-        <RemixForm characters={characters} videoModel={!!s.videoModel} defaultUrl={url} />
+        <RemixForm characters={characters} engines={<EngineFields />} defaultUrl={url} />
         <div className="panel" style={{ padding: "8px 24px" }}>
           <h2 style={{ padding: "16px 0 8px" }}>Versions créées</h2>
           {remixes.length === 0 && <p className="sec small" style={{ paddingBottom: 16 }}>Aucune pour l'instant.</p>}

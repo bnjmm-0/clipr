@@ -3,11 +3,11 @@ import path from "node:path";
 import { getSettings, requireCredential } from "../settings";
 import { priceOf, recordUsage } from "../usage";
 import { TOOL_APPS, withStyle } from "../ai-tools";
-import { download, replicateRun } from "./media";
+import { download, replicateInput, replicateRun } from "./media";
 import { apiError } from "./errors";
+import { ELEVEN_URL } from "./tts";
 
 const OPENAI = () => process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1";
-const ELEVEN = "https://api.elevenlabs.io/v1";
 
 // Exécute un outil de Conseils IA (image, vidéo ou voix) et écrit le résultat à côté de `base` (sans extension).
 // Retourne le chemin du fichier créé.
@@ -36,7 +36,7 @@ export async function runTool(toolId: string, input: Record<string, string>, bas
 
   if (toolId === "elevenlabs") {
     const key = await requireCredential("elevenlabs");
-    const r = await fetch(`${ELEVEN}/text-to-speech/${encodeURIComponent(input.voice_id)}?output_format=mp3_44100_128`, {
+    const r = await fetch(`${ELEVEN_URL()}/text-to-speech/${encodeURIComponent(input.voice_id)}?output_format=mp3_44100_128`, {
       method: "POST", headers: { "xi-api-key": key, "content-type": "application/json" },
       body: JSON.stringify({ text: input.prompt, model_id: input.model_id || "eleven_multilingual_v2", voice_settings: { stability: Number(input.stability), similarity_boost: 0.75, speed: Number(input.speed) } }),
     });
@@ -47,15 +47,9 @@ export async function runTool(toolId: string, input: Record<string, string>, bas
     return out;
   }
 
-  // Modèles Replicate : chaque modèle a ses propres paramètres (noms vérifiés sur replicate.com).
-  const params: Record<string, Record<string, unknown>> = {
-    flux: { prompt, aspect_ratio: input.aspect_ratio, resolution: input.resolution, output_format: "png" },
-    kling: { prompt, duration: Number(input.duration), aspect_ratio: input.aspect_ratio, mode: input.mode, generate_audio: input.generate_audio === "true" },
-    veo: { prompt, duration: Number(input.duration), aspect_ratio: input.aspect_ratio, resolution: input.resolution, generate_audio: input.generate_audio === "true" },
-    seedance: { prompt, duration: Number(input.duration), aspect_ratio: input.aspect_ratio, resolution: input.resolution, generate_audio: input.generate_audio === "true" },
-  };
-  if (!params[toolId] || !t.model) throw new Error("Outil inconnu");
-  const url = await replicateRun(t.model, params[toolId]);
+  // Modèles Replicate : chaque modèle a ses propres paramètres (voir replicateInput).
+  if (!t.model) throw new Error("Outil inconnu");
+  const url = await replicateRun(t.model, replicateInput(toolId, prompt, input));
   const ext = path.extname(new URL(url).pathname) || (t.kind === "video" ? ".mp4" : ".png");
   const out = `${base}${ext}`;
   await download(url, out);
@@ -68,7 +62,7 @@ export async function listTextModels(provider: "openai" | "anthropic"): Promise<
   try {
     if (provider === "anthropic") {
       const key = await requireCredential("anthropic");
-      const r = await fetch("https://api.anthropic.com/v1/models?limit=50", { headers: { "x-api-key": key, "anthropic-version": "2023-06-01" } });
+      const r = await fetch(`${process.env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com/v1"}/models?limit=50`, { headers: { "x-api-key": key, "anthropic-version": "2023-06-01" } });
       const j = await r.json();
       return r.ok ? (j.data ?? []).map((m: { id: string }) => m.id) : [];
     }
@@ -87,7 +81,7 @@ export async function listElevenVoices(): Promise<{ voices: ElevenVoice[]; model
   try {
     const key = await requireCredential("elevenlabs");
     const h = { "xi-api-key": key };
-    const [rv, rm] = await Promise.all([fetch(`${ELEVEN}/voices`, { headers: h }), fetch(`${ELEVEN}/models`, { headers: h })]);
+    const [rv, rm] = await Promise.all([fetch(`${ELEVEN_URL()}/voices`, { headers: h }), fetch(`${ELEVEN_URL()}/models`, { headers: h })]);
     const jv = rv.ok ? await rv.json() : { voices: [] };
     const jm = rm.ok ? await rm.json() : [];
     const voices = (jv.voices ?? []).map((v: { voice_id: string; name: string; labels?: Record<string, string> }) => ({ id: v.voice_id, name: [v.name, v.labels?.gender, v.labels?.accent].filter(Boolean).join(" · ") }));

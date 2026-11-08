@@ -10,6 +10,8 @@ import { chat } from "@/lib/providers/llm";
 import { accountSnapshot } from "@/lib/providers/tiktok";
 import { CREATORS } from "@/lib/ai-advice";
 import { TOOL_APPS, pickOptions } from "@/lib/ai-tools";
+import { IMAGE_ENGINES, SCRIPT_ENGINES, isElevenVoice, parseVisuals, pickEngine } from "@/lib/engines";
+import { VOICES } from "@/lib/providers/tts";
 
 export type FormState = { error?: string; ok?: string } | undefined;
 
@@ -93,7 +95,7 @@ export async function createProject(fd: FormData) {
     data: {
       userId: u.id, title: String(fd.get("title") || "") || (url ? "Vidéo importée" : "Nouveau projet"), language: String(fd.get("language") || "fr"),
       minClipSec: min, maxClipSec: max, clipCount: Math.max(1, Math.min(15, Number(fd.get("clipCount")) || 6)),
-      captionStyle: String(fd.get("captionStyle") || "bold"), cropMode: String(fd.get("cropMode") || "center"), rightsAccepted: true,
+      captionStyle: String(fd.get("captionStyle") || "bold"), cropMode: String(fd.get("cropMode") || "center"), rightsAccepted: true, engineScript: pickEngine(SCRIPT_ENGINES, fd.get("engineScript")),
       status: url ? "queued" : "uploading",
       source: { create: { kind: url ? "url" : "upload", url: url || null } },
     },
@@ -231,26 +233,40 @@ export async function deleteCharacter(id: string) {
 
 const clampDur = (v: unknown) => Math.max(15, Math.min(600, Number(v) || 60));
 
+// IA choisies dans le formulaire d'une vidéo (composant EngineFields) ; vides = celles de Réglages.
+function readEngines(fd: FormData) {
+  const { visualMode, engineVideo } = parseVisuals(fd.get("visuals") ?? fd.get("visualMode"));
+  const voice = String(fd.get("voice") || "").slice(0, 80);
+  return {
+    visualMode, engineVideo, engineScript: pickEngine(SCRIPT_ENGINES, fd.get("engineScript")), engineImage: pickEngine(IMAGE_ENGINES, fd.get("engineImage")),
+    voice: isElevenVoice(voice) || VOICES.includes(voice) ? voice : null,
+  };
+}
+type Engines = ReturnType<typeof readEngines>;
+
 export async function createSeries(fd: FormData) {
   const u = await requireUser();
   const title = String(fd.get("title") || "").trim().slice(0, 80);
   const premise = String(fd.get("premise") || "").trim().slice(0, 2000);
   if (!title || !premise) return;
-  const s = await prisma.series.create({ data: { userId: u.id, title, premise, characterId: String(fd.get("characterId") || "") || null, durationSec: clampDur(fd.get("durationSec")), language: String(fd.get("language") || "fr"), captionStyle: String(fd.get("captionStyle") || "bold") } });
-  if (fd.get("startNow") === "on") await startEpisode(u.id, { seriesId: s.id, brief: premise, visualMode: String(fd.get("visualMode") || "image") });
+  const s = await prisma.series.create({ data: { userId: u.id, title, premise, characterId: String(fd.get("characterId") || "") || null, durationSec: clampDur(fd.get("durationSec")), language: String(fd.get("language") || "fr"), captionStyle: String(fd.get("captionStyle") || "bold"), ...readEngines(fd) } });
+  if (fd.get("startNow") === "on") await startEpisode(u.id, { seriesId: s.id, brief: premise });
   revalidatePath("/videos-ia");
 }
 
-async function startEpisode(userId: string, o: { seriesId?: string; brief: string; origin?: string; durationSec?: number; characterId?: string | null; captionStyle?: string; language?: string; visualMode?: string; sourceUrl?: string | null; title?: string; queue?: boolean }) {
+async function startEpisode(userId: string, o: { seriesId?: string; brief: string; origin?: string; durationSec?: number; characterId?: string | null; captionStyle?: string; language?: string; engines?: Engines; sourceUrl?: string | null; title?: string; queue?: boolean }) {
   let number = 1, dur = o.durationSec ?? 60, style = o.captionStyle ?? "bold", lang = o.language ?? "fr";
+  let eng: Engines = o.engines ?? { visualMode: "image", engineVideo: null, engineScript: null, engineImage: null, voice: null };
   if (o.seriesId) {
     const s = await prisma.series.findFirstOrThrow({ where: { id: o.seriesId, userId } });
     number = (await prisma.episode.count({ where: { seriesId: s.id } })) + 1;
     dur = o.durationSec ?? s.durationSec; style = s.captionStyle; lang = s.language;
+    // Un épisode de série reprend les IA choisies pour la série.
+    if (!o.engines) eng = { visualMode: s.visualMode, engineVideo: s.engineVideo, engineScript: s.engineScript, engineImage: s.engineImage, voice: s.voice };
   }
   const ep = await prisma.episode.create({ data: {
     userId, seriesId: o.seriesId, number, title: o.title || (o.seriesId ? `Épisode ${number}` : "Nouvelle vidéo"), brief: o.brief.slice(0, 4000), origin: o.origin ?? (o.seriesId ? "series" : "manual"),
-    durationSec: dur, captionStyle: style, language: lang, characterId: o.characterId ?? null, visualMode: o.visualMode === "video" ? "video" : "image", sourceUrl: o.sourceUrl ?? null,
+    durationSec: dur, captionStyle: style, language: lang, characterId: o.characterId ?? null, visualMode: eng.visualMode === "video" ? "video" : "image", engineVideo: eng.engineVideo, engineScript: eng.engineScript, engineImage: eng.engineImage, voice: eng.voice, sourceUrl: o.sourceUrl ?? null,
     status: o.queue === false ? "uploading" : "queued",
   } });
   if (o.queue !== false) await enqueue("episode", { episodeId: ep.id });
@@ -261,7 +277,7 @@ export async function nextEpisode(seriesId: string, fd?: FormData) {
   const u = await requireUser();
   const brief = String(fd?.get("brief") || "").trim();
   const s = await prisma.series.findFirstOrThrow({ where: { id: seriesId, userId: u.id } });
-  await startEpisode(u.id, { seriesId, brief: brief || `Écris la suite de la série. ${s.premise}`, visualMode: String(fd?.get("visualMode") || "image") });
+  await startEpisode(u.id, { seriesId, brief: brief || `Écris la suite de la série. ${s.premise}` });
   revalidatePath("/videos-ia");
 }
 
@@ -271,7 +287,7 @@ export async function createEpisode(fd: FormData) {
   const brief = String(fd.get("brief") || "").trim();
   if (!brief) return;
   const ep = await startEpisode(u.id, { brief, origin: String(fd.get("origin") || "manual"), durationSec: clampDur(fd.get("durationSec")), characterId: String(fd.get("characterId") || "") || null,
-    captionStyle: String(fd.get("captionStyle") || "bold"), language: String(fd.get("language") || "fr"), visualMode: String(fd.get("visualMode") || "image"), title: String(fd.get("title") || "") || undefined });
+    captionStyle: String(fd.get("captionStyle") || "bold"), language: String(fd.get("language") || "fr"), engines: readEngines(fd), title: String(fd.get("title") || "") || undefined });
   redirect(`/videos-ia/${ep.id}`);
 }
 
@@ -284,7 +300,7 @@ export async function createRemix(fd: FormData) {
   const ep = await startEpisode(u.id, {
     brief: String(fd.get("brief") || "Reprends la mécanique de cette vidéo.").slice(0, 2000), origin: "remix", sourceUrl: url, durationSec: clampDur(fd.get("durationSec")),
     characterId: String(fd.get("characterId") || "") || null, captionStyle: String(fd.get("captionStyle") || "bold"), language: String(fd.get("language") || "fr"),
-    visualMode: String(fd.get("visualMode") || "image"), title: "Vidéo reprise", queue: !!url,
+    engines: readEngines(fd), title: "Vidéo reprise", queue: !!url,
   });
   return { id: ep.id };
 }

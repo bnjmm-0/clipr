@@ -84,6 +84,19 @@ Chaque étape enregistre son résultat : une relance reprend là où le traiteme
 La charte graphique suit le guide unslop (unslop par Damir Sokolovsky, @heydamir, CC BY 4.0) : une seule couleur d'accent,
 le jaune des sous-titres, et le « mot actif » comme signature.
 
+## IA au choix pour chaque vidéo
+
+Les formulaires (Vidéos IA, série, Reprendre une vidéo, Nouveau projet de clips) proposent l'IA à utiliser :
+script (GPT ou Claude), voix off (voix OpenAI ou voix du compte ElevenLabs), visuels (images animées ou plans
+vidéo Kling 3.0, Veo 3.1, Seedance 2.0 via Replicate) et images (GPT Image ou FLUX.2 Pro). Par défaut : les
+choix de Réglages ; une IA sans clé est grisée. Une série garde ses choix pour tous ses épisodes.
+Code : `lib/engines.ts`, `components/EngineFields.tsx`, `readEngines` dans `app/actions.ts`.
+Après mise à jour : `npx prisma db push` (nouveaux champs), puis relancer `npm run dev` et `npm run worker`.
+
+Tests sans clé ni coût : les adresses des services se remplacent par variables d'environnement
+(`OPENAI_BASE_URL`, `ANTHROPIC_BASE_URL`, `GROQ_BASE_URL`, `REPLICATE_BASE_URL`, `ELEVENLABS_BASE_URL`)
+pour viser un faux serveur local.
+
 ## Pas encore fait (prochaines étapes du plan)
 
 - Paiement Stripe (les minutes sont gérées par un registre de crédits, ajout manuel par l'admin dans Réglages).

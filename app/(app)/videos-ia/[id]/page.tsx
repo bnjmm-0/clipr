@@ -9,6 +9,7 @@ import PublishForm from "@/components/PublishForm";
 import Icon from "@/components/Icon";
 import { deleteEpisode, nextEpisode, retryEpisode, rewriteEpisode } from "@/app/actions";
 import type { Script } from "@/lib/pipeline/episode";
+import { enginesSummary } from "@/lib/engines";
 
 export default async function EpisodePage({ params }: { params: Promise<{ id: string }> }) {
   const u = await requireUser();
@@ -56,6 +57,7 @@ export default async function EpisodePage({ params }: { params: Promise<{ id: st
           <div className="panel">
             <h2>Script</h2>
             <p className="xs muted" style={{ marginTop: 4 }}>{e.durationSec} s · {e.visualMode === "video" ? "plans vidéo IA" : "images animées"} · consigne : {e.brief.slice(0, 200)}</p>
+            {enginesSummary(e) && <p className="xs muted" style={{ marginTop: 4 }}>IA utilisées : {enginesSummary(e)}</p>}
             {!script && <p className="sec small" style={{ marginTop: 12 }}>Le script apparaîtra ici dès qu'il est écrit.</p>}
             {script && (
               <ol style={{ paddingLeft: 20, marginTop: 16 }} className="stack">

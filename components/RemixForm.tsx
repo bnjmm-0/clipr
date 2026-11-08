@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import { createRemix } from "@/app/actions";
 import DurationField from "./DurationField";
 
-export default function RemixForm({ characters, videoModel, defaultUrl }: { characters: { id: string; name: string }[]; videoModel: boolean; defaultUrl?: string }) {
+// `engines` : listes de choix d'IA (EngineFields, rendu côté serveur).
+export default function RemixForm({ characters, engines, defaultUrl }: { characters: { id: string; name: string }[]; engines: React.ReactNode; defaultUrl?: string }) {
   const r = useRouter();
   const ref = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -42,9 +43,9 @@ export default function RemixForm({ characters, videoModel, defaultUrl }: { char
       <DurationField />
       <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: "0 12px" }}>
         <div><label>Personnage</label><select name="characterId"><option value="">Sans personnage</option>{characters.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-        <div><label>Visuels</label><select name="visualMode"><option value="image">Images animées</option><option value="video" disabled={!videoModel}>Plans vidéo IA</option></select></div>
         <div><label>Sous-titres</label><select name="captionStyle"><option value="bold">Pop</option><option value="bounce">Rebond</option><option value="box">Encadré</option><option value="typewriter">Machine à écrire</option></select></div>
         <div><label>Langue</label><select name="language"><option value="fr">Français</option><option value="en">Anglais</option><option value="es">Espagnol</option><option value="ar">Arabe</option></select></div>
+        {engines}
       </div>
       <label className="check" style={{ marginTop: 16 }}><input type="checkbox" name="rights" required /><span className="small">Je peux utiliser cette vidéo comme source d'inspiration ; la nouvelle version ne reprend aucune phrase ni image</span></label>
       {err && <p className="alert">{err}</p>}
