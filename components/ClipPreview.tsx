@@ -1,28 +1,24 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 
-// Aperçu du produit : un clip 9:16 dont le mot prononcé s'allume en rythme, et la timeline des moments notés.
-const LINES = [["Personne", "ne", "te", "dit"], ["ça", "au", "début"], ["publie", "chaque", "jour"], ["pendant", "un", "mois"]];
+// Aperçu du produit : un clip vertical en vidéo (public/accueil/apercu.mp4), et la timeline des moments notés.
 const BARS = Array.from({ length: 64 }, (_, i) => 18 + Math.round(70 * Math.abs(Math.sin(i * 1.7) * Math.cos(i * 0.31))));
 const SEGS = [{ l: 8, w: 14, s: 74 }, { l: 37, w: 18, s: 91 }, { l: 66, w: 12, s: 68 }];
 
 export default function ClipPreview() {
-  const [k, setK] = useState(0);
-  const total = LINES.flat().length;
+  const ref = useRef<HTMLVideoElement>(null);
+  // Lecture seulement quand l'aperçu est à l'écran, et jamais si le visiteur a demandé moins d'animations (l'image fixe reste).
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const t = setInterval(() => setK((x) => (x + 1) % total), 420);
-    return () => clearInterval(t);
-  }, [total]);
-  let idx = k, li = 0;
-  while (idx >= LINES[li].length) { idx -= LINES[li].length; li++; }
+    const v = ref.current;
+    if (!v || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) v.play().catch(() => {}); else v.pause(); }, { threshold: 0.25 });
+    io.observe(v);
+    return () => io.disconnect();
+  }, []);
   return (
     <div className="preview">
-      <div className="phone" aria-label="Aperçu d'un clip vertical sous-titré">
-        <div className="scene" /><div className="person" /><div className="mic" />
-        <div className="hook"><span>Le secret des comptes qui percent</span></div>
-        <div className="caps">{LINES[li].map((w, i) => <span key={i}>{i === idx ? <b>{w}</b> : w}{" "}</span>)}</div>
-        <div className="bar" style={{ width: `${((k + 1) / total) * 100}%`, transition: "width .4s linear" }} />
+      <div className="phone">
+        <video ref={ref} src="/accueil/apercu.mp4" poster="/accueil/apercu.webp" muted loop playsInline preload="metadata" aria-label="Aperçu d'un clip vertical" />
       </div>
       <div className="timeline stack-24" style={{ minWidth: 0, width: "100%" }}>
         <div>
