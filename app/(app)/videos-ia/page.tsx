@@ -4,11 +4,11 @@ import { prisma } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import Poller from "@/components/Poller";
 import DurationField from "@/components/DurationField";
-import EngineFields, { VoiceOptions } from "@/components/EngineFields";
+import EngineFields from "@/components/EngineFields";
 import StoryOptionsFields from "@/components/StoryOptionsFields";
 import { isElevenVoice } from "@/lib/engines";
 import fs from "node:fs";
-import { createCharacter, createEpisode, createSeries, deleteCharacter, nextEpisode, remakeCharacterRef } from "@/app/actions";
+import { createEpisode, createSeries, deleteCharacter, nextEpisode, remakeCharacterRef } from "@/app/actions";
 
 const STATUS: Record<string, [string, string]> = { ready: ["Prête", "ok"], failed: ["Échec", "err"], review: ["À valider", "live"] };
 const STYLE_OPTS = <><option value="bold">Pop</option><option value="bounce">Rebond</option><option value="box">Encadré</option><option value="typewriter">Machine à écrire</option></>;
@@ -36,11 +36,11 @@ export default async function AiVideos({ searchParams }: { searchParams: Promise
   };
   const pending = characters.some((c) => { const r = refOf(c); return !r.src && !r.error; });
   const castPick = characters.length ? (
-    <div style={{ gridColumn: "1 / -1" }}><label>Personnages (coche-en plusieurs pour qu'ils se parlent)</label>
+    <div style={{ gridColumn: "1 / -1" }}><label>Personnages (coche-en plusieurs pour qu'ils se parlent) · <Link href="/personnages" className="credlink">en créer un</Link></label>
       <div className="chips">{characters.map((c) => { const r = refOf(c); return (
         <label key={c.id}><input type="checkbox" name="cast" value={c.id} defaultChecked={preCast.has(c.id)} /><span>{r.src && <img src={r.src} alt="" className="chipava" />}{c.name}</span></label>
       ); })}</div></div>
-  ) : <p className="xs muted" style={{ gridColumn: "1 / -1", marginTop: 12 }}>Crée tes personnages (à droite) : chacun reçoit une fiche de référence qui le garde identique d'une image à l'autre.</p>;
+  ) : <p className="xs muted" style={{ gridColumn: "1 / -1", marginTop: 12 }}>Crée tes personnages dans <Link href="/personnages" style={{ textDecoration: "underline" }}>Personnages</Link> : chacun reçoit une fiche de référence qui le garde identique d'une image à l'autre.</p>;
   const formatPick = <div><label>Format</label><select name="format" defaultValue={format === "narration" ? "narration" : "dialogue"}><option value="dialogue">Dialogue entre personnages</option><option value="narration">Narration (voix off)</option></select></div>;
   const reviewBox = <label className="check" style={{ marginTop: 16 }}><input type="checkbox" name="review" defaultChecked /><span className="small">Valider le script et les images avant de créer la vidéo (recommandé : la voix et l'animation sont la partie la plus chère)</span></label>;
   return (
@@ -128,19 +128,7 @@ export default async function AiVideos({ searchParams }: { searchParams: Promise
                 </div>
               </div>
             ); })}
-            <details style={{ marginTop: 16 }}>
-              <summary style={{ cursor: "pointer" }} className="sec">Nouveau personnage</summary>
-              <form action={createCharacter}>
-                <label>Nom</label><input name="name" required placeholder="Fraise" />
-                <label>Apparence (en détail : forme, couleurs, visage, tenue, accessoires)</label><textarea name="look" rows={3} required placeholder="Fraise anthropomorphe brillante, grands yeux expressifs, petite bouche, couronne de feuilles vertes, bras et jambes fins, lunettes de soleil roses" />
-                <label>Personnalité (elle dirige aussi le ton de sa voix)</label><input name="personality" placeholder="Dramatique, jalouse, drôle" />
-                <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: "0 12px" }}>
-                  <div><label>Voix</label><select name="voice" defaultValue="alloy"><VoiceOptions /></select></div>
-                  <div><label>Style visuel</label><input name="visualStyle" defaultValue="3D hyperréaliste façon film d'animation" /></div>
-                </div>
-                <button className="btn sm" style={{ marginTop: 16 }}>Créer le personnage</button>
-              </form>
-            </details>
+            <Link href="/personnages" className="btn sm" style={{ marginTop: 16 }}>Créer un personnage</Link>
           </div>
         </div>
       </div>

@@ -12,6 +12,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const create = [
     f.clips && { href: "/tableau-de-bord", label: "Clips", icon: "clips" },
     f.aiVideos && { href: "/videos-ia", label: "Vidéos IA et séries", icon: "film" },
+    f.aiVideos && { href: "/personnages", label: "Personnages", icon: "user" },
     f.aiVideos && { href: "/inspiration", label: "Inspiration fruits IA", icon: "layers" },
     f.remix && { href: "/reprendre", label: "Reprendre une vidéo", icon: "copy" },
     (f.textToImage || f.textToVideo) && { href: "/generer", label: "Images et vidéos", icon: "image" },

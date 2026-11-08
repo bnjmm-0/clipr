@@ -90,6 +90,10 @@ le jaune des sous-titres, et le « mot actif » comme signature.
   (tâche `character_ref`) ; elle est jointe à chaque image où il apparaît (GPT Image : `/images/edits` ;
   FLUX.2 : `input_images`) pour qu'il reste identique. En plans vidéo, chaque plan part de l'image de la scène
   (`start_image` pour Kling, `image` pour Veo et Seedance).
+- Créateur de personnages (`/personnages`) : fruit (ou autre), genre, âge, corps, yeux, air, tenue, accessoires,
+  style, personnalité et voix ; la description est assemblée en direct (`lib/fruit-builder.ts`). La fiche peut être
+  générée en 3 propositions (`variantsJson`) dont on choisit une ; les personnages se cochent ensuite dans les
+  formulaires de vidéo (`/videos-ia?cast=<id>` pré-coche).
 - Dialogue : plusieurs personnages cochés + format « Dialogue » ; chaque réplique est dite avec la voix de son
   personnage (OpenAI dirigée par sa personnalité, ou ElevenLabs).
 - Validation : avec « Valider avant la vidéo », le worker s'arrête après le script et les images (statut

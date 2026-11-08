@@ -44,6 +44,7 @@ model Character {
   voice       String   @default("alloy") // voix de synthèse (OpenAI TTS)
   visualStyle String   @default("cinématique réaliste")
   refImagePath String? // fiche de référence (vue de face, fond neutre) qui verrouille son apparence dans chaque image
+  variantsJson String? // propositions de fiche générées par le créateur ; refImagePath est celle choisie
   createdAt   DateTime @default(now())
   series      Series[]
 }

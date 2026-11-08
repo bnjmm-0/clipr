@@ -82,15 +82,20 @@ export function castIn(scene: Scene, cast: Character[]) {
 }
 
 // Fiche de référence d'un personnage (générée une fois, puis jointe à chaque image où il apparaît).
-export async function ensureCharacterRef(c: Character, userId: string, engine?: string | null, force = false) {
+// Avec `variants` > 1 (créateur de personnages), plusieurs propositions : la première est retenue en attendant le choix.
+export async function ensureCharacterRef(c: Character, userId: string, engine?: string | null, force = false, variants = 1) {
   if (!force && c.refImagePath && fs.existsSync(c.refImagePath)) return c.refImagePath;
   const dir = path.join(STORAGE_DIR, "characters");
   fs.mkdirSync(dir, { recursive: true });
-  const file = path.join(dir, `${c.id}.png`);
-  await generateImage(referencePrompt(c), file, userId, engine);
-  await prisma.character.update({ where: { id: c.id }, data: { refImagePath: file } });
-  c.refImagePath = file;
-  return file;
+  const files: string[] = [];
+  for (let i = 0; i < Math.max(1, Math.min(4, variants)); i++) {
+    const file = path.join(dir, variants > 1 ? `${c.id}_v${i}.png` : `${c.id}.png`);
+    await generateImage(referencePrompt(c), file, userId, engine);
+    files.push(file);
+  }
+  await prisma.character.update({ where: { id: c.id }, data: { refImagePath: files[0], variantsJson: files.length > 1 ? JSON.stringify(files) : null } });
+  c.refImagePath = files[0];
+  return files[0];
 }
 
 export async function writeScript(episodeId: string): Promise<Script> {

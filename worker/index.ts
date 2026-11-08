@@ -35,7 +35,7 @@ async function handle(job: { id: string; type: string; payload: string; projectI
     case "episode": return processEpisode(p.episodeId);
     case "character_ref": {
       const c = await prisma.character.findUnique({ where: { id: p.characterId } });
-      if (c) await ensureCharacterRef(c, c.userId, p.engine, true);
+      if (c) await ensureCharacterRef(c, c.userId, p.engine, true, Number(p.variants) || 1);
       return;
     }
     case "trends": await refreshTrends(); return;

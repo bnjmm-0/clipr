@@ -597,3 +597,29 @@ html{scroll-behavior:smooth}
 .inspchars{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-top:12px}
 @media (max-width:1000px){.inspdetail{grid-template-columns:minmax(0,1fr)}.inspplayer{max-width:360px;margin:0 auto;width:100%}}
 @media (max-width:640px){.inspgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.inspfacts{grid-template-columns:minmax(0,1fr)}}
+
+/* Créateur de personnages (app/(app)/personnages). */
+.charlayout{grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:24px;align-items:start}
+.builder2{grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px}
+.fruitpick{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px}
+.fruit{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border-radius:12px;border:1px solid var(--line);background:var(--raised);color:var(--text2);font-size:12px;cursor:pointer;transition:border-color .2s var(--ease),background .2s var(--ease),scale .15s var(--ease)}
+.fruit span{font-size:24px;line-height:30px;transition:scale .25s var(--ease)}
+.fruit:hover{border-color:var(--line2);color:var(--text)}.fruit:hover span{scale:1.15}
+.fruit:active{scale:.95}
+.fruit.on{border-color:rgba(245,217,10,.6);background:rgba(245,217,10,.1);color:var(--text)}
+.lookpreview{margin-top:16px;padding:12px 14px;border-radius:12px;border:1px dashed rgba(245,217,10,.35);background:rgba(245,217,10,.04)}
+.lookpreview p{margin-top:4px;font-size:14px;line-height:21px}
+.charcard2{padding:14px}
+.charmain{display:flex;gap:14px;align-items:flex-start}
+.charbig{width:110px;aspect-ratio:2/3;flex:none;border-radius:12px;object-fit:cover;background:var(--raised);border:1px solid var(--line);display:grid;place-items:center;text-align:center;font-size:11px;color:var(--muted);padding:6px}
+.charbig.wait{animation:refpulse 1.6s var(--ease) infinite}.charbig.err{color:var(--err)}
+.charlook{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.variants{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.varrow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.variant{display:flex;flex-direction:column;align-items:center;gap:4px}
+.variant button{padding:0;border:2px solid transparent;border-radius:12px;overflow:hidden;cursor:pointer;background:none;width:100%;transition:border-color .2s var(--ease),scale .15s var(--ease)}
+.variant button:hover{border-color:var(--line2)}.variant button:active{scale:.97}
+.variant img{width:100%;aspect-ratio:2/3;object-fit:cover;display:block}
+.variant.on button{border-color:var(--accent)}.variant.on span{color:var(--accent)}
+@media (max-width:1000px){.charlayout{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:520px){.builder2{grid-template-columns:minmax(0,1fr)}.charbig{width:84px}.fruitpick{grid-template-columns:repeat(4,minmax(0,1fr))}.fruit{font-size:11px;padding:6px 2px}.fruit span{font-size:20px;line-height:24px}}

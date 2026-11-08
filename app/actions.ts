@@ -226,7 +226,20 @@ export async function createCharacter(fd: FormData) {
   if (!name || !look) return;
   const voice = String(fd.get("voice") || "alloy");
   const c = await prisma.character.create({ data: { userId: u.id, name, look, personality: String(fd.get("personality") || "").slice(0, 600), voice: isElevenVoice(voice) || VOICES.includes(voice) ? voice : "alloy", visualStyle: String(fd.get("visualStyle") || "cinématique réaliste").slice(0, 120) } });
-  await enqueue("character_ref", { characterId: c.id });
+  // Fiche de référence en arrière-plan : 3 propositions au choix depuis le créateur de personnages.
+  await enqueue("character_ref", { characterId: c.id, variants: fd.get("variants") === "3" ? 3 : 1 });
+  revalidatePath("/videos-ia");
+  revalidatePath("/personnages");
+}
+
+// Garde une des propositions de fiche comme référence du personnage.
+export async function chooseCharacterVariant(id: string, i: number) {
+  const u = await requireUser();
+  const c = await prisma.character.findFirst({ where: { id, userId: u.id } });
+  const files: string[] = c?.variantsJson ? JSON.parse(c.variantsJson) : [];
+  if (!c || !files[i]) return;
+  await prisma.character.update({ where: { id }, data: { refImagePath: files[i] } });
+  revalidatePath("/personnages");
   revalidatePath("/videos-ia");
 }
 
@@ -235,14 +248,16 @@ export async function remakeCharacterRef(id: string) {
   const u = await requireUser();
   const c = await prisma.character.findFirst({ where: { id, userId: u.id } });
   if (!c) return;
-  await prisma.character.update({ where: { id }, data: { refImagePath: null } });
-  await enqueue("character_ref", { characterId: id });
+  await prisma.character.update({ where: { id }, data: { refImagePath: null, variantsJson: null } });
+  await enqueue("character_ref", { characterId: id, variants: c.variantsJson ? 3 : 1 });
   revalidatePath("/videos-ia");
+  revalidatePath("/personnages");
 }
 
 export async function deleteCharacter(id: string) {
   const u = await requireUser();
   await prisma.character.deleteMany({ where: { id, userId: u.id } });
+  revalidatePath("/personnages");
   revalidatePath("/videos-ia");
 }
 

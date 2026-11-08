@@ -25,7 +25,8 @@ export async function GET(req: Request) {
     if (e && /^\d{1,3}$/.test(q.get("scene")!)) file = `${episodeDir(e.id)}/img_${q.get("scene")}.png`;
   } else if (q.get("char")) {
     const c = await prisma.character.findFirst({ where: { id: q.get("char")!, userId: u.id } });
-    file = c?.refImagePath; name = `${(c?.name || "personnage").replace(/[^\p{L}\p{N} _-]/gu, "")}.png`;
+    // ?v=N&variant=1 : une des propositions du créateur ; sinon la fiche retenue.
+    file = q.get("variant") !== null && c?.variantsJson ? (JSON.parse(c.variantsJson) as string[])[Number(q.get("variant"))] : c?.refImagePath; name = `${(c?.name || "personnage").replace(/[^\p{L}\p{N} _-]/gu, "")}.png`;
   } else if (q.get("episode")) {
     const e = await prisma.episode.findFirst({ where: { id: q.get("episode")!, userId: u.id } });
     file = kind === "thumb" ? e?.thumbPath : kind === "cover" ? e?.coverPath : e?.filePath;
