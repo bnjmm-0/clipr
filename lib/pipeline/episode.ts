@@ -30,7 +30,7 @@ const stage = (id: string, s: string, progress: number) => prisma.episode.update
 
 // Nombre de scènes : une toutes les `perScene` secondes (rythme choisi dans les options, 6 s par défaut).
 export function sceneCount(durationSec: number, perScene = 6) {
-  return Math.max(3, Math.min(90, Math.round(durationSec / perScene)));
+  return Math.max(3, Math.min(60, Math.round(durationSec / perScene)));
 }
 
 // Répartit les mots d'une narration sur sa durée, au prorata de leur longueur (sous-titres mot à mot sans coût de transcription).
