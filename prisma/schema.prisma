@@ -69,6 +69,7 @@ model Series {
   castJson    String?   // ids des personnages qui jouent (dialogues entre personnages)
   format      String    @default("narration") // narration (voix off) | dialogue (chaque réplique avec la voix de son personnage)
   review      Boolean   @default(false) // s'arrêter après le script et les images pour validation
+  optionsJson String?   // options de création (genre, accroche, fin, rythme, décor…) : lib/story-options.ts
   createdAt   DateTime  @default(now())
   episodes    Episode[]
 }
@@ -96,6 +97,7 @@ model Episode {
   castJson    String?   // ids des personnages qui jouent (dialogues entre personnages)
   format      String    @default("narration") // narration (voix off) | dialogue (chaque réplique avec la voix de son personnage)
   review      Boolean   @default(false) // s'arrêter après le script et les images pour validation
+  optionsJson String?   // options de création (genre, accroche, fin, rythme, décor…) : lib/story-options.ts
   approved    Boolean   @default(false) // storyboard validé : voix et vidéo peuvent être générées
   language    String   @default("fr")
   characterId String?  // personnage utilisé hors série

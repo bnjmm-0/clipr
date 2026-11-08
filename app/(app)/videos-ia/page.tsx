@@ -5,6 +5,7 @@ import { getSettings } from "@/lib/settings";
 import Poller from "@/components/Poller";
 import DurationField from "@/components/DurationField";
 import EngineFields, { VoiceOptions } from "@/components/EngineFields";
+import StoryOptionsFields from "@/components/StoryOptionsFields";
 import { isElevenVoice } from "@/lib/engines";
 import fs from "node:fs";
 import { createCharacter, createEpisode, createSeries, deleteCharacter, nextEpisode, remakeCharacterRef } from "@/app/actions";
@@ -57,6 +58,7 @@ export default async function AiVideos({ searchParams }: { searchParams: Promise
               <div><label>Langue</label><select name="language"><option value="fr">Français</option><option value="en">Anglais</option><option value="es">Espagnol</option><option value="ar">Arabe</option></select></div>
               <EngineFields />
             </div>
+            <StoryOptionsFields id="ep" open />
             {reviewBox}
             <input type="hidden" name="origin" value={idee ? "trend" : "manual"} />
             <button className="btn accent" style={{ marginTop: 20 }}>Générer la vidéo</button>
@@ -96,6 +98,7 @@ export default async function AiVideos({ searchParams }: { searchParams: Promise
                 <label>Concept</label><textarea name="premise" rows={3} required placeholder="Des fruits en couple dans une villa : chaque épisode, une trahison, une dispute ou un nouveau couple" />
                 <DurationField />
                 <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: "0 12px" }}>{castPick}{formatPick}<div><label>Sous-titres</label><select name="captionStyle">{STYLE_OPTS}</select></div><EngineFields /></div>
+                <StoryOptionsFields id="se" series />
                 {reviewBox}
                 <label className="check" style={{ marginTop: 16 }}><input type="checkbox" name="startNow" defaultChecked /><span className="small">Générer l'épisode 1 tout de suite</span></label>
                 <button className="btn sm" style={{ marginTop: 16 }}>Créer la série</button>

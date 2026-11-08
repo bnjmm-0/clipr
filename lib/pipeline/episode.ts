@@ -14,6 +14,7 @@ import { getSettings } from "../settings";
 import { scriptModel } from "../engines";
 import { MOTION_RULES, SCRIPT_RULES, SERIES_RULES, VISUAL_RULES, referencePrompt, voiceDirection } from "../prompting";
 import type { Character } from "@prisma/client";
+import { optionsPrompt, parseOptions, secondsPerScene, styleOverride } from "../story-options";
 
 // speaker : nom du personnage qui dit la réplique (format dialogue) ; motion : prompt de mouvement (plans vidéo).
 export type Scene = { speaker?: string; narration: string; visual: string; motion?: string };
@@ -27,8 +28,9 @@ export function episodeDir(id: string) {
 
 const stage = (id: string, s: string, progress: number) => prisma.episode.update({ where: { id }, data: { stage: s, progress, status: "processing" } });
 
-export function sceneCount(durationSec: number) {
-  return Math.max(3, Math.min(60, Math.round(durationSec / 6)));
+// Nombre de scènes : une toutes les `perScene` secondes (rythme choisi dans les options, 6 s par défaut).
+export function sceneCount(durationSec: number, perScene = 6) {
+  return Math.max(3, Math.min(90, Math.round(durationSec / perScene)));
 }
 
 // Répartit les mots d'une narration sur sa durée, au prorata de leur longueur (sous-titres mot à mot sans coût de transcription).
@@ -95,7 +97,8 @@ export async function writeScript(episodeId: string): Promise<Script> {
   const ep = await loadEpisode(episodeId);
   const cast = await loadCast(ep);
   const dialogue = ep.format === "dialogue" && cast.length > 0;
-  const n = sceneCount(ep.durationSec);
+  const opts = parseOptions(ep.optionsJson);
+  const n = sceneCount(ep.durationSec, secondsPerScene(opts));
   const words = Math.round(ep.durationSec * 2.4);
   let context = "";
   if (ep.series) {
@@ -108,14 +111,14 @@ export async function writeScript(episodeId: string): Promise<Script> {
     context += `\nVIDÉO À REPRENDRE (transcription, ${Math.round(t.duration)} s) :\n${t.text.slice(0, 14000)}\nAnalyse sa structure (accroche, enchaînement, rythme, chute) et écris une version ORIGINALE qui reprend cette mécanique, avec tes propres phrases et les personnages ci-dessous. Ne recopie aucune phrase.`;
   }
   if (cast.length) context += `\nPersonnages (chacun a une image de référence qui fixe son apparence) :\n${cast.map((c) => `- ${c.name} : ${c.look}. Personnalité : ${c.personality || "à ta guise"}.`).join("\n")}`;
-  const style = cast.find((c) => c.visualStyle)?.visualStyle;
+  const style = styleOverride(opts) ?? cast.find((c) => c.visualStyle)?.visualStyle;
   const video = ep.visualMode === "video";
   const sceneShape = `{${dialogue ? `"speaker":"nom exact du personnage qui parle, ou Narrateur",` : ""}"narration":"${dialogue ? "réplique dite par ce personnage" : "texte lu en voix off"}","visual":"..."${video ? ',"motion":"..."' : ""}}`;
   const out = await chat({
     userId: ep.userId, purpose: "script vidéo IA", json: true, maxTokens: Math.min(12000, 1500 + n * 220), ...scriptModel(ep.engineScript, await getSettings()),
     system: `Tu es scénariste et réalisateur de vidéos verticales courtes (TikTok, Reels, Shorts), spécialiste des mini-feuilletons de personnages IA (fruits, objets, animaux qui parlent).\n${SCRIPT_RULES}\n${VISUAL_RULES}${video ? `\n${MOTION_RULES}` : ""}`,
     user: `Langue des répliques : ${ep.language}. Durée visée : ${ep.durationSec} s, environ ${words} mots ${dialogue ? "de dialogue" : "de narration"} au total, en ${n} scènes.
-Consigne : ${ep.brief}${context}
+Consigne : ${ep.brief}${context}${optionsPrompt(opts)}
 ${dialogue ? `Format DIALOGUE : chaque scène est une réplique d'un seul personnage, qui est au centre de l'image en train de parler ; alterne les personnages comme dans une scène de série ; "Narrateur" seulement si c'est indispensable.` : "Format NARRATION : une voix off raconte, les images montrent l'action."}
 Dans "visual", nomme les personnages présents par leur nom exact${style ? ` ; style visuel : ${style}` : ""}.
 JSON : {"title":"titre court","hook":"accroche affichée au début (max 8 mots)","summary":"résumé en 2 phrases pour la mémoire de la série","scenes":[${sceneShape}]}`,
@@ -214,7 +217,9 @@ export async function processEpisode(episodeId: string) {
   await run("ffmpeg", ["-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", list, "-c", "copy", joined]);
   const out = path.join(dir, "episode.mp4");
   const thumb = path.join(dir, "thumb.jpg");
-  await renderClip({ src: joined, srcW: 1080, srcH: 1920, s: 0, e: t, words, style: ep.captionStyle, hook: script.hook, cropMode: "none", cropOffset: 0.5, keyframes: [], outFile: out, thumbFile: thumb });
+  // Option « numéro d'épisode » : l'accroche affichée commence par « Épisode N ».
+  const hook = parseOptions(ep.optionsJson).episodeLabel && ep.seriesId ? `Épisode ${ep.number} · ${script.hook}` : script.hook;
+  await renderClip({ src: joined, srcW: 1080, srcH: 1920, s: 0, e: t, words, style: ep.captionStyle, hook, cropMode: "none", cropOffset: 0.5, keyframes: [], outFile: out, thumbFile: thumb });
 
   // 6. Miniature
   await stage(ep.id, "miniature", 95);

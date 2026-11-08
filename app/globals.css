@@ -565,3 +565,12 @@ html{scroll-behavior:smooth}
 .shot textarea{min-height:64px;font-size:13px}
 .shot .speaker{font-size:12px;color:var(--accent);font-weight:500}
 .pepite{display:inline-block;margin-right:6px;padding:0 6px;border-radius:999px;background:rgba(245,217,10,.15);color:var(--accent);font-size:11px;font-weight:600;vertical-align:1px}
+
+/* Bloc « Plus d'options » des vidéos IA et séries. */
+.moreopts{margin-top:16px;border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:rgba(255,255,255,.015)}
+.moreopts summary{cursor:pointer;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font-size:14px}
+.moreopts summary::marker{color:var(--accent)}
+.moreopts[open] summary{margin-bottom:4px}
+.optgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px}
+.optgrid .full{grid-column:1 / -1}
+@media (max-width:640px){.optgrid{grid-template-columns:minmax(0,1fr)}}

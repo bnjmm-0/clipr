@@ -9,7 +9,9 @@
     "worker": "tsx worker/index.ts",
     "db:push": "prisma db push",
     "gen:key": "node -e \"console.log(require('crypto').randomBytes(32).toString('base64'))\"",
-    "test": "tsx --test tests/*.test.ts"
+    "test": "tsx --test tests/*.test.ts",
+    "mock:ai": "node scripts/mock-ai.mjs",
+    "worker:mock": "OPENAI_BASE_URL=http://127.0.0.1:4010/v1 ANTHROPIC_BASE_URL=http://127.0.0.1:4010/v1 GROQ_BASE_URL=http://127.0.0.1:4010/v1 REPLICATE_BASE_URL=http://127.0.0.1:4010/v1 ELEVENLABS_BASE_URL=http://127.0.0.1:4010/v1 tsx worker/index.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.16.2",

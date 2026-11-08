@@ -95,6 +95,9 @@ le jaune des sous-titres, et le « mot actif » comme signature.
 - Validation : avec « Valider avant la vidéo », le worker s'arrête après le script et les images (statut
   `review`) ; on corrige une réplique ou une image, puis « Valider et créer la vidéo » lance voix et animation.
 - Règles de prompts (scénario, image, mouvement, voix, stratégie) : `lib/prompting.ts`.
+- « Plus d'options » (vidéo, série, reprise) : genre, accroche, fin (dont boucle), rythme (une scène toutes les
+  4, 6 ou 8 s), public, langage, décor, lumière, style visuel, cadrage, inspiration, « Épisode N » pour les séries.
+  Définies dans `lib/story-options.ts`, enregistrées dans `optionsJson`, transmises au scénariste.
 - Statistiques : « pépites » (vidéos à 5 × les vues habituelles, médiane du compte) et rythme de publication ;
   le Coach TikTok suit les mêmes règles de stratégie.
 
@@ -107,9 +110,10 @@ choix de Réglages ; une IA sans clé est grisée. Une série garde ses choix po
 Code : `lib/engines.ts`, `components/EngineFields.tsx`, `readEngines` dans `app/actions.ts`.
 Après mise à jour : `npx prisma db push` (nouveaux champs), puis relancer `npm run dev` et `npm run worker`.
 
-Tests sans clé ni coût : les adresses des services se remplacent par variables d'environnement
-(`OPENAI_BASE_URL`, `ANTHROPIC_BASE_URL`, `GROQ_BASE_URL`, `REPLICATE_BASE_URL`, `ELEVENLABS_BASE_URL`)
-pour viser un faux serveur local.
+Tests sans clé ni coût : `npm run mock:ai` lance un faux serveur qui imite OpenAI, Anthropic, Groq,
+Replicate et ElevenLabs (`scripts/mock-ai.mjs`) ; arrêter le worker habituel puis lancer `npm run worker:mock`,
+qui vise ce serveur via `OPENAI_BASE_URL`, `ANTHROPIC_BASE_URL`, `GROQ_BASE_URL`, `REPLICATE_BASE_URL` et
+`ELEVENLABS_BASE_URL`. Une clé (même fausse) doit exister dans Réglages pour chaque service appelé.
 
 ## Pas encore fait (prochaines étapes du plan)
 

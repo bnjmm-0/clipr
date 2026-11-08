@@ -13,6 +13,7 @@ import { TOOL_APPS, pickOptions } from "@/lib/ai-tools";
 import { IMAGE_ENGINES, SCRIPT_ENGINES, isElevenVoice, parseVisuals, pickEngine } from "@/lib/engines";
 import { VOICES } from "@/lib/providers/tts";
 import { COACH_RULES } from "@/lib/prompting";
+import { readStoryOptions } from "@/lib/story-options";
 
 export type FormState = { error?: string; ok?: string } | undefined;
 
@@ -267,6 +268,7 @@ async function readStory(fd: FormData, userId: string) {
   return {
     characterId: (cast[0] ?? single) as string | null, castJson: cast.length ? JSON.stringify(cast) : null,
     format: fd.get("format") === "dialogue" && (cast.length > 0 || !!single) ? "dialogue" : "narration", review: fd.get("review") === "on",
+    optionsJson: readStoryOptions(fd),
   };
 }
 type Story = Awaited<ReturnType<typeof readStory>>;
@@ -284,18 +286,18 @@ export async function createSeries(fd: FormData) {
 async function startEpisode(userId: string, o: { seriesId?: string; brief: string; origin?: string; durationSec?: number; captionStyle?: string; language?: string; engines?: Engines; story?: Story; sourceUrl?: string | null; title?: string; queue?: boolean }) {
   let number = 1, dur = o.durationSec ?? 60, style = o.captionStyle ?? "bold", lang = o.language ?? "fr";
   let eng: Engines = o.engines ?? { visualMode: "image", engineVideo: null, engineScript: null, engineImage: null, voice: null };
-  let story: Story = o.story ?? { characterId: null, castJson: null, format: "narration", review: false };
+  let story: Story = o.story ?? { characterId: null, castJson: null, format: "narration", review: false, optionsJson: null };
   if (o.seriesId) {
     const s = await prisma.series.findFirstOrThrow({ where: { id: o.seriesId, userId } });
     number = (await prisma.episode.count({ where: { seriesId: s.id } })) + 1;
     dur = o.durationSec ?? s.durationSec; style = s.captionStyle; lang = s.language;
     // Un épisode de série reprend les IA choisies pour la série.
     if (!o.engines) eng = { visualMode: s.visualMode, engineVideo: s.engineVideo, engineScript: s.engineScript, engineImage: s.engineImage, voice: s.voice };
-    if (!o.story) story = { characterId: s.characterId, castJson: s.castJson, format: s.format, review: s.review };
+    if (!o.story) story = { characterId: s.characterId, castJson: s.castJson, format: s.format, review: s.review, optionsJson: s.optionsJson };
   }
   const ep = await prisma.episode.create({ data: {
     userId, seriesId: o.seriesId, number, title: o.title || (o.seriesId ? `Épisode ${number}` : "Nouvelle vidéo"), brief: o.brief.slice(0, 4000), origin: o.origin ?? (o.seriesId ? "series" : "manual"),
-    durationSec: dur, captionStyle: style, language: lang, characterId: story.characterId, castJson: story.castJson, format: story.format, review: story.review, visualMode: eng.visualMode === "video" ? "video" : "image", engineVideo: eng.engineVideo, engineScript: eng.engineScript, engineImage: eng.engineImage, voice: eng.voice, sourceUrl: o.sourceUrl ?? null,
+    durationSec: dur, captionStyle: style, language: lang, characterId: story.characterId, castJson: story.castJson, format: story.format, review: story.review, optionsJson: story.optionsJson, visualMode: eng.visualMode === "video" ? "video" : "image", engineVideo: eng.engineVideo, engineScript: eng.engineScript, engineImage: eng.engineImage, voice: eng.voice, sourceUrl: o.sourceUrl ?? null,
     status: o.queue === false ? "uploading" : "queued",
   } });
   if (o.queue !== false) await enqueue("episode", { episodeId: ep.id });
