@@ -7,8 +7,9 @@ import { publishTargets } from "@/lib/platforms";
 import Poller from "@/components/Poller";
 import PublishForm from "@/components/PublishForm";
 import Icon from "@/components/Icon";
-import { deleteEpisode, nextEpisode, retryEpisode, rewriteEpisode } from "@/app/actions";
-import type { Script } from "@/lib/pipeline/episode";
+import fs from "node:fs";
+import { approveEpisode, deleteEpisode, nextEpisode, redoSceneImage, retryEpisode, rewriteEpisode, updateScene } from "@/app/actions";
+import { episodeDir, type Script } from "@/lib/pipeline/episode";
 import { enginesSummary } from "@/lib/engines";
 
 export default async function EpisodePage({ params }: { params: Promise<{ id: string }> }) {
@@ -18,6 +19,9 @@ export default async function EpisodePage({ params }: { params: Promise<{ id: st
   if (!e) notFound();
   const script = e.scriptJson ? (JSON.parse(e.scriptJson) as Script) : null;
   const busy = ["queued", "processing"].includes(e.status);
+  const review = e.status === "review" || (busy && e.review && !e.approved);
+  const hasImg = (i: number) => fs.existsSync(`${episodeDir(e.id)}/img_${i}.png`);
+  const imgV = (i: number) => (hasImg(i) ? Math.round(fs.statSync(`${episodeDir(e.id)}/img_${i}.png`).mtimeMs) : 0);
   const platforms = await publishTargets(u.id);
   return (
     <div className="page">
@@ -43,7 +47,7 @@ export default async function EpisodePage({ params }: { params: Promise<{ id: st
           ) : (
             <div className="placeholder" style={{ borderRadius: 14 }}>
               <div style={{ width: "70%" }} className="stack">
-                <span className="tag"><span className={`dot ${e.status === "failed" ? "err" : "live"}`} />{e.status === "failed" ? "Échec" : e.status === "uploading" ? "En attente du fichier" : e.stage}</span>
+                <span className="tag"><span className={`dot ${e.status === "failed" ? "err" : "live"}`} />{e.status === "failed" ? "Échec" : e.status === "uploading" ? "En attente du fichier" : e.status === "review" ? "À valider" : e.stage}</span>
                 <div className="progress"><i style={{ transform: `scaleX(${e.progress / 100})` }} /></div>
               </div>
             </div>
@@ -52,6 +56,31 @@ export default async function EpisodePage({ params }: { params: Promise<{ id: st
         </div>
         <div className="stack-24">
           {e.error && <p className="alert">{e.error}</p>}
+          {review && script && (
+            <div className="panel">
+              <div className="row" style={{ alignItems: "flex-start", gap: 16 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <h2>Storyboard à valider</h2>
+                  <p className="sec small" style={{ marginTop: 6 }}>Relis chaque réplique et regarde chaque image. Corrige ou refais ce qui ne va pas : c'est gratuit comparé à la voix et à l'animation. Quand tout est bon, valide.</p>
+                </div>
+                {e.status === "review" && <form action={approveEpisode.bind(null, e.id)}><button className="btn accent">Valider et créer la vidéo</button></form>}
+              </div>
+              <div className="board">
+                {script.scenes.map((sc, i) => (
+                  <div key={i} className="raised shot">
+                    {hasImg(i) ? <img src={`/api/files?episode=${e.id}&scene=${i}&v=${imgV(i)}`} alt={`Scène ${i + 1}`} /> : <span className="noimg">Image en cours…</span>}
+                    <div className="row"><span className="xs muted num">Scène {i + 1}</span><span className="sp" />{sc.speaker && <span className="speaker">{sc.speaker}</span>}</div>
+                    <form action={updateScene.bind(null, e.id, i)} className="stack-8">
+                      <textarea name="narration" defaultValue={sc.narration} aria-label={`Réplique de la scène ${i + 1}`} disabled={e.status !== "review"} />
+                      <details><summary className="xs muted" style={{ cursor: "pointer" }}>Description de l'image</summary><textarea name="visual" defaultValue={sc.visual} style={{ marginTop: 6 }} disabled={e.status !== "review"} /></details>
+                      {e.status === "review" && <button className="btn ghost sm">Enregistrer</button>}
+                    </form>
+                    {e.status === "review" && <form action={redoSceneImage.bind(null, e.id, i)}><button className="btn quiet sm" style={{ width: "100%" }}>Refaire l'image</button></form>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {e.status === "ready" && <div className="panel"><h2>Publier</h2><PublishForm episodeId={e.id} caption={`${script?.hook ?? e.title} #ia`} platforms={platforms} />
             <p className="xs muted" style={{ marginTop: 12 }}>Vidéo générée par IA : indique-le lors de la publication.</p></div>}
           <div className="panel">
@@ -59,11 +88,12 @@ export default async function EpisodePage({ params }: { params: Promise<{ id: st
             <p className="xs muted" style={{ marginTop: 4 }}>{e.durationSec} s · {e.visualMode === "video" ? "plans vidéo IA" : "images animées"} · consigne : {e.brief.slice(0, 200)}</p>
             {enginesSummary(e) && <p className="xs muted" style={{ marginTop: 4 }}>IA utilisées : {enginesSummary(e)}</p>}
             {!script && <p className="sec small" style={{ marginTop: 12 }}>Le script apparaîtra ici dès qu'il est écrit.</p>}
-            {script && (
+            {script && !review && (
               <ol style={{ paddingLeft: 20, marginTop: 16 }} className="stack">
-                {script.scenes.map((s, i) => <li key={i}><p>{s.narration}</p><p className="xs muted" style={{ marginTop: 4 }}>{s.visual}</p></li>)}
+                {script.scenes.map((s, i) => <li key={i}><p>{s.speaker && <b style={{ color: "var(--accent)" }}>{s.speaker} : </b>}{s.narration}</p><p className="xs muted" style={{ marginTop: 4 }}>{s.visual}</p></li>)}
               </ol>
             )}
+            {script && review && <p className="xs muted" style={{ marginTop: 12 }}>Le script se relit et se corrige dans le storyboard ci-dessus.</p>}
           </div>
           {e.publications.length > 0 && <div className="panel" style={{ padding: "8px 24px" }}><table><thead><tr><th>Plateforme</th><th>Prévue</th><th>État</th></tr></thead><tbody>
             {e.publications.map((p) => <tr key={p.id}><td>{platformLabel(p.platform)}{p.auto ? " · auto" : ""}</td><td className="num">{p.scheduledAt?.toLocaleString("fr-FR") ?? "immédiate"}</td><td>{p.state}{p.error ? ` · ${p.error}` : ""}</td></tr>)}

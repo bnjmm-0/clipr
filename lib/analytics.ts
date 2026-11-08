@@ -14,6 +14,10 @@ export const SLOTS: [string, number, number][] = [["Nuit", 0, 6], ["Matin", 6, 1
 
 const eng = (v: StatVideo) => v.likes + (v.comments ?? 0) + (v.shares ?? 0);
 const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
+const median = (xs: number[]) => { const s = [...xs].sort((a, b) => a - b); return s.length ? (s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2) : 0; };
+// Une « pépite » fait au moins PEPITE fois les vues habituelles du compte (médiane, peu sensible aux records) :
+// son sujet, son accroche ou son format a touché des gens hors abonnés, c'est elle qu'il faut refaire.
+export const PEPITE = 5;
 
 export function analyse(snaps: Snap[], periodDays: number) {
   const last = snaps.at(-1);
@@ -41,6 +45,13 @@ export function analyse(snaps: Snap[], periodDays: number) {
   const bySlot = SLOTS.map(([label, a, b]) => { const xs = dated.filter((v) => { const h = new Date(v.date).getHours(); return h >= a && h < b; }).map((v) => v.views); return { label, full: label.toLowerCase(), v: avg(xs), n: xs.length }; });
   const best = (xs: { label: string; full: string; v: number; n: number }[]) => [...xs].filter((x) => x.n > 0).sort((a, b) => b.v - a.v)[0] ?? null;
 
+  const usual = withViews.length >= 5 ? median(withViews.map((v) => v.views)) : 0;
+  const score = (v: StatVideo) => (usual ? v.views / usual : 0);
+  const pepites = usual ? [...withViews].filter((v) => score(v) >= PEPITE).sort((a, b) => b.views - a.views) : [];
+  // Rythme : vidéos publiées sur les 7 et 28 derniers jours (objectif 3 à 7 par semaine).
+  const now = last.createdAt.getTime();
+  const postedIn = (d: number) => dated.filter((v) => now - Date.parse(v.date) <= d * 864e5).length;
+
   return {
     last, base, hasBase, delta, perDay, days,
     // La période demandée est-elle entièrement couverte par les relevés ? Sinon on affiche « depuis le … ».
@@ -50,6 +61,7 @@ export function analyse(snaps: Snap[], periodDays: number) {
     videos, star, engagement,
     avgViews: avg(withViews.map((v) => v.views)),
     byDay, bySlot, bestDay: best(byDay), bestSlot: best(bySlot),
+    usual, score, pepites, week: postedIn(7), perWeek4: postedIn(28) / 4, dated: dated.length > 0,
     rich: videos.some((v) => v.cover || v.comments || v.shares), // relevé fait avec la nouvelle version (miniatures, commentaires…)
   };
 }

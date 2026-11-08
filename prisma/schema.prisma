@@ -43,6 +43,7 @@ model Character {
   personality String   @default("")
   voice       String   @default("alloy") // voix de synthèse (OpenAI TTS)
   visualStyle String   @default("cinématique réaliste")
+  refImagePath String? // fiche de référence (vue de face, fond neutre) qui verrouille son apparence dans chaque image
   createdAt   DateTime @default(now())
   series      Series[]
 }
@@ -65,6 +66,9 @@ model Series {
   voice       String?   // voix OpenAI (ex. "coral") ou "elevenlabs:<id de voix>"
   engineImage String?   // gpt-image | flux
   engineVideo String?   // kling | veo | seedance
+  castJson    String?   // ids des personnages qui jouent (dialogues entre personnages)
+  format      String    @default("narration") // narration (voix off) | dialogue (chaque réplique avec la voix de son personnage)
+  review      Boolean   @default(false) // s'arrêter après le script et les images pour validation
   createdAt   DateTime  @default(now())
   episodes    Episode[]
 }
@@ -89,6 +93,10 @@ model Episode {
   voice       String?   // voix OpenAI (ex. "coral") ou "elevenlabs:<id de voix>"
   engineImage String?   // gpt-image | flux
   engineVideo String?   // kling | veo | seedance
+  castJson    String?   // ids des personnages qui jouent (dialogues entre personnages)
+  format      String    @default("narration") // narration (voix off) | dialogue (chaque réplique avec la voix de son personnage)
+  review      Boolean   @default(false) // s'arrêter après le script et les images pour validation
+  approved    Boolean   @default(false) // storyboard validé : voix et vidéo peuvent être générées
   language    String   @default("fr")
   characterId String?  // personnage utilisé hors série
   scriptJson  String?  // {title, hook, scenes:[{narration, visual}], summary}

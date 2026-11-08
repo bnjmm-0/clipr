@@ -47,6 +47,7 @@ export default function RemixForm({ characters, engines, defaultUrl }: { charact
         <div><label>Langue</label><select name="language"><option value="fr">Français</option><option value="en">Anglais</option><option value="es">Espagnol</option><option value="ar">Arabe</option></select></div>
         {engines}
       </div>
+      <label className="check" style={{ marginTop: 16 }}><input type="checkbox" name="review" defaultChecked /><span className="small">Valider le script et les images avant de créer la vidéo (recommandé)</span></label>
       <label className="check" style={{ marginTop: 16 }}><input type="checkbox" name="rights" required /><span className="small">Je peux utiliser cette vidéo comme source d'inspiration ; la nouvelle version ne reprend aucune phrase ni image</span></label>
       {err && <p className="alert">{err}</p>}
       {pct !== null && <div style={{ marginTop: 16 }}><div className="progress"><i style={{ transform: `scaleX(${pct / 100})` }} /></div><p className="xs muted num" style={{ marginTop: 8 }}>Envoi {pct} %</p></div>}

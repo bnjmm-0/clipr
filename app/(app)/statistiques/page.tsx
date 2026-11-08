@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
-import { PERIODS, analyse, fmt, pct, signed, type StatVideo } from "@/lib/analytics";
+import { PEPITE, PERIODS, analyse, fmt, pct, signed, type StatVideo } from "@/lib/analytics";
 import TrendChart from "@/components/TrendChart";
 import BarsChart from "@/components/BarsChart";
 import Thumb from "@/components/Thumb";
@@ -142,6 +142,9 @@ export default async function Stats({ searchParams }: { searchParams: Promise<{ 
                   {a.star && a.star.views > 0 && <li><span className="ic">⭐</span><span>Ta vidéo star : <b>« {a.star.title || "Sans titre"} »</b> avec {fmt(a.star.views)} vues{a.avgViews ? `, soit ${(a.star.views / a.avgViews).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} × ta moyenne` : ""}.</span></li>}
                   {a.bestDay && <li><span className="ic">📅</span><span>Tes vidéos publiées le <b>{a.bestDay.full}</b> font le plus de vues ({fmt(a.bestDay.v)} en moyenne sur {a.bestDay.n} vidéo{a.bestDay.n > 1 ? "s" : ""}).</span></li>}
                   {a.bestSlot && <li><span className="ic">🕒</span><span>Le meilleur moment de publication : <b>{a.bestSlot.full}</b> ({fmt(a.bestSlot.v)} vues en moyenne).</span></li>}
+                  {a.pepites.length > 0 && <li><span className="ic">💎</span><span><b>{a.pepites.length} pépite{a.pepites.length > 1 ? "s" : ""}</b> : {a.pepites.slice(0, 2).map((v) => `« ${v.title || "Sans titre"} » (×${Math.round(a.score(v))})`).join(", ")} {a.pepites.length > 1 ? "ont" : "a"} fait au moins {PEPITE} × tes vues habituelles ({fmt(a.usual)}). Refais-{a.pepites.length > 1 ? "les" : "la"} : même sujet, même accroche, en mieux.</span></li>}
+                  {a.usual > 0 && a.pepites.length === 0 && <li><span className="ic">💎</span><span>Aucune vidéo n'a encore fait {PEPITE} × tes vues habituelles ({fmt(a.usual)}) : teste d'autres accroches dans les 2 premières secondes.</span></li>}
+                  {a.dated && <li><span className="ic">🗓️</span><span><b>{a.week} vidéo{a.week > 1 ? "s" : ""}</b> publiée{a.week > 1 ? "s" : ""} ces 7 derniers jours ({a.perWeek4.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} par semaine sur un mois). {a.week < 3 ? "Vise 3 à 7 par semaine : la régularité compte plus que la perfection." : a.week > 7 ? "Beau rythme : garde la qualité de l'accroche à chaque vidéo." : "C'est la bonne zone (3 à 7 par semaine), garde ce rythme."}</span></li>}
                   {a.engagement !== null && <li><span className="ic">💬</span><span>Sur 100 personnes qui regardent, environ <b>{(a.engagement * 100).toLocaleString("fr-FR", { maximumFractionDigits: 1 })}</b> aiment, commentent ou partagent.</span></li>}
                 </ul>
                 {!a.rich && <p className="xs muted" style={{ marginTop: 12 }}>Miniatures, commentaires et partages apparaîtront au prochain relevé.</p>}
@@ -176,7 +179,7 @@ export default async function Stats({ searchParams }: { searchParams: Promise<{ 
                         <div key={v.id ?? i} className="vrow">
                           <span className="vthumb"><Thumb src={v.cover} platform={platform} />{v.duration ? <span className="d num">{dur(v.duration)}</span> : null}</span>
                           <span className="vinfo">
-                            <span className="t">{isStar && <span className="star">⭐ </span>}{v.url ? <a href={v.url} target="_blank" rel="noreferrer">{v.title || "Sans titre"}</a> : v.title || "Sans titre"}</span>
+                            <span className="t">{isStar && <span className="star">⭐ </span>}{a.score(v) >= PEPITE && <span className="pepite" title={`${Math.round(a.score(v))} × tes vues habituelles`}>×{Math.round(a.score(v))}</span>}{v.url ? <a href={v.url} target="_blank" rel="noreferrer">{v.title || "Sans titre"}</a> : v.title || "Sans titre"}</span>
                             <span className="xs muted num">{v.date ? new Date(v.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) : ""}</span>
                           </span>
                           <span className="num"><b>{fmt(v.views)}</b></span>

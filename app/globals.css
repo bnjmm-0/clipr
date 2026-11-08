@@ -550,3 +550,18 @@ html{scroll-behavior:smooth}
 @media (max-width:1000px){.ukpis{grid-template-columns:repeat(2,minmax(0,1fr))}.ufams{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:640px){.ufams{grid-template-columns:1fr}.ufam{min-height:200px}.urow{grid-template-columns:48px minmax(0,1fr) auto;gap:10px}.uthumb{width:48px;height:32px}.uvol{display:none}.uquota{align-items:flex-start}}
 .credlink{color:var(--accent);text-decoration:underline;text-underline-offset:2px}.credlink:hover{color:#fff}
+
+/* Vidéos IA : fiches de référence des personnages et storyboard à valider. */
+.charcard{display:flex;gap:12px;padding:12px;margin-top:12px;align-items:flex-start}
+.charref{width:64px;aspect-ratio:2/3;flex:none;border-radius:10px;object-fit:cover;background:var(--raised);border:1px solid var(--line);display:grid;place-items:center;text-align:center;font-size:10px;line-height:13px;color:var(--muted);padding:4px}
+.charref.wait{animation:refpulse 1.6s var(--ease) infinite}
+.charref.err{color:var(--err)}
+@keyframes refpulse{50%{opacity:.5}}
+.chipava{width:20px;height:20px;border-radius:999px;object-fit:cover;margin-left:-6px}
+.board{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-top:16px}
+.shot{display:flex;flex-direction:column;gap:8px;padding:10px}
+.shot img,.shot .noimg{width:100%;aspect-ratio:9/16;object-fit:cover;border-radius:10px;background:var(--raised)}
+.shot .noimg{display:grid;place-items:center;color:var(--muted);font-size:12px;animation:refpulse 1.6s var(--ease) infinite}
+.shot textarea{min-height:64px;font-size:13px}
+.shot .speaker{font-size:12px;color:var(--accent);font-weight:500}
+.pepite{display:inline-block;margin-right:6px;padding:0 6px;border-radius:999px;background:rgba(245,217,10,.15);color:var(--accent);font-size:11px;font-weight:600;vertical-align:1px}

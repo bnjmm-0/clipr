@@ -18,6 +18,14 @@ export async function GET(req: Request) {
     const c = await prisma.clip.findFirst({ where: { id: q.get("clip")!, project: { userId: u.id } } });
     file = kind === "thumb" ? c?.thumbPath : kind === "cover" ? c?.coverPath : c?.filePath;
     name = `${(c?.title || "clip").replace(/[^\p{L}\p{N} _-]/gu, "").slice(0, 60)}${kind === "cover" ? " - miniature" : ""}.${img ? "jpg" : "mp4"}`;
+  } else if (q.get("episode") && q.get("scene")) {
+    // Image d'une scène (storyboard à valider)
+    const e = await prisma.episode.findFirst({ where: { id: q.get("episode")!, userId: u.id } });
+    const { episodeDir } = await import("@/lib/pipeline/episode");
+    if (e && /^\d{1,3}$/.test(q.get("scene")!)) file = `${episodeDir(e.id)}/img_${q.get("scene")}.png`;
+  } else if (q.get("char")) {
+    const c = await prisma.character.findFirst({ where: { id: q.get("char")!, userId: u.id } });
+    file = c?.refImagePath; name = `${(c?.name || "personnage").replace(/[^\p{L}\p{N} _-]/gu, "")}.png`;
   } else if (q.get("episode")) {
     const e = await prisma.episode.findFirst({ where: { id: q.get("episode")!, userId: u.id } });
     file = kind === "thumb" ? e?.thumbPath : kind === "cover" ? e?.coverPath : e?.filePath;

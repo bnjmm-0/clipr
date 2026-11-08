@@ -12,6 +12,7 @@ import { CREATORS } from "@/lib/ai-advice";
 import { TOOL_APPS, pickOptions } from "@/lib/ai-tools";
 import { IMAGE_ENGINES, SCRIPT_ENGINES, isElevenVoice, parseVisuals, pickEngine } from "@/lib/engines";
 import { VOICES } from "@/lib/providers/tts";
+import { COACH_RULES } from "@/lib/prompting";
 
 export type FormState = { error?: string; ok?: string } | undefined;
 
@@ -221,7 +222,19 @@ export async function createCharacter(fd: FormData) {
   const name = String(fd.get("name") || "").trim().slice(0, 60);
   const look = String(fd.get("look") || "").trim().slice(0, 1200);
   if (!name || !look) return;
-  await prisma.character.create({ data: { userId: u.id, name, look, personality: String(fd.get("personality") || "").slice(0, 600), voice: String(fd.get("voice") || "alloy"), visualStyle: String(fd.get("visualStyle") || "cinématique réaliste").slice(0, 120) } });
+  const voice = String(fd.get("voice") || "alloy");
+  const c = await prisma.character.create({ data: { userId: u.id, name, look, personality: String(fd.get("personality") || "").slice(0, 600), voice: isElevenVoice(voice) || VOICES.includes(voice) ? voice : "alloy", visualStyle: String(fd.get("visualStyle") || "cinématique réaliste").slice(0, 120) } });
+  await enqueue("character_ref", { characterId: c.id });
+  revalidatePath("/videos-ia");
+}
+
+// Refait la fiche de référence d'un personnage (elle fixe son apparence dans chaque image).
+export async function remakeCharacterRef(id: string) {
+  const u = await requireUser();
+  const c = await prisma.character.findFirst({ where: { id, userId: u.id } });
+  if (!c) return;
+  await prisma.character.update({ where: { id }, data: { refImagePath: null } });
+  await enqueue("character_ref", { characterId: id });
   revalidatePath("/videos-ia");
 }
 
@@ -244,29 +257,45 @@ function readEngines(fd: FormData) {
 }
 type Engines = ReturnType<typeof readEngines>;
 
+// Distribution, format et validation d'une vidéo : personnages cochés (name="cast"), "dialogue" ou "narration",
+// et case « valider avant la vidéo » (name="review").
+async function readStory(fd: FormData, userId: string) {
+  const ids = [...new Set(fd.getAll("cast").map(String))].slice(0, 6);
+  const own = ids.length ? await prisma.character.findMany({ where: { id: { in: ids }, userId }, select: { id: true } }) : [];
+  const cast = ids.filter((id) => own.some((o) => o.id === id));
+  const single = String(fd.get("characterId") || "") || null;
+  return {
+    characterId: (cast[0] ?? single) as string | null, castJson: cast.length ? JSON.stringify(cast) : null,
+    format: fd.get("format") === "dialogue" && (cast.length > 0 || !!single) ? "dialogue" : "narration", review: fd.get("review") === "on",
+  };
+}
+type Story = Awaited<ReturnType<typeof readStory>>;
+
 export async function createSeries(fd: FormData) {
   const u = await requireUser();
   const title = String(fd.get("title") || "").trim().slice(0, 80);
   const premise = String(fd.get("premise") || "").trim().slice(0, 2000);
   if (!title || !premise) return;
-  const s = await prisma.series.create({ data: { userId: u.id, title, premise, characterId: String(fd.get("characterId") || "") || null, durationSec: clampDur(fd.get("durationSec")), language: String(fd.get("language") || "fr"), captionStyle: String(fd.get("captionStyle") || "bold"), ...readEngines(fd) } });
+  const s = await prisma.series.create({ data: { userId: u.id, title, premise, durationSec: clampDur(fd.get("durationSec")), language: String(fd.get("language") || "fr"), captionStyle: String(fd.get("captionStyle") || "bold"), ...readEngines(fd), ...(await readStory(fd, u.id)) } });
   if (fd.get("startNow") === "on") await startEpisode(u.id, { seriesId: s.id, brief: premise });
   revalidatePath("/videos-ia");
 }
 
-async function startEpisode(userId: string, o: { seriesId?: string; brief: string; origin?: string; durationSec?: number; characterId?: string | null; captionStyle?: string; language?: string; engines?: Engines; sourceUrl?: string | null; title?: string; queue?: boolean }) {
+async function startEpisode(userId: string, o: { seriesId?: string; brief: string; origin?: string; durationSec?: number; captionStyle?: string; language?: string; engines?: Engines; story?: Story; sourceUrl?: string | null; title?: string; queue?: boolean }) {
   let number = 1, dur = o.durationSec ?? 60, style = o.captionStyle ?? "bold", lang = o.language ?? "fr";
   let eng: Engines = o.engines ?? { visualMode: "image", engineVideo: null, engineScript: null, engineImage: null, voice: null };
+  let story: Story = o.story ?? { characterId: null, castJson: null, format: "narration", review: false };
   if (o.seriesId) {
     const s = await prisma.series.findFirstOrThrow({ where: { id: o.seriesId, userId } });
     number = (await prisma.episode.count({ where: { seriesId: s.id } })) + 1;
     dur = o.durationSec ?? s.durationSec; style = s.captionStyle; lang = s.language;
     // Un épisode de série reprend les IA choisies pour la série.
     if (!o.engines) eng = { visualMode: s.visualMode, engineVideo: s.engineVideo, engineScript: s.engineScript, engineImage: s.engineImage, voice: s.voice };
+    if (!o.story) story = { characterId: s.characterId, castJson: s.castJson, format: s.format, review: s.review };
   }
   const ep = await prisma.episode.create({ data: {
     userId, seriesId: o.seriesId, number, title: o.title || (o.seriesId ? `Épisode ${number}` : "Nouvelle vidéo"), brief: o.brief.slice(0, 4000), origin: o.origin ?? (o.seriesId ? "series" : "manual"),
-    durationSec: dur, captionStyle: style, language: lang, characterId: o.characterId ?? null, visualMode: eng.visualMode === "video" ? "video" : "image", engineVideo: eng.engineVideo, engineScript: eng.engineScript, engineImage: eng.engineImage, voice: eng.voice, sourceUrl: o.sourceUrl ?? null,
+    durationSec: dur, captionStyle: style, language: lang, characterId: story.characterId, castJson: story.castJson, format: story.format, review: story.review, visualMode: eng.visualMode === "video" ? "video" : "image", engineVideo: eng.engineVideo, engineScript: eng.engineScript, engineImage: eng.engineImage, voice: eng.voice, sourceUrl: o.sourceUrl ?? null,
     status: o.queue === false ? "uploading" : "queued",
   } });
   if (o.queue !== false) await enqueue("episode", { episodeId: ep.id });
@@ -286,7 +315,7 @@ export async function createEpisode(fd: FormData) {
   if (!(await featureEnabled("aiVideos"))) throw new Error("Fonction désactivée");
   const brief = String(fd.get("brief") || "").trim();
   if (!brief) return;
-  const ep = await startEpisode(u.id, { brief, origin: String(fd.get("origin") || "manual"), durationSec: clampDur(fd.get("durationSec")), characterId: String(fd.get("characterId") || "") || null,
+  const ep = await startEpisode(u.id, { brief, origin: String(fd.get("origin") || "manual"), durationSec: clampDur(fd.get("durationSec")), story: await readStory(fd, u.id),
     captionStyle: String(fd.get("captionStyle") || "bold"), language: String(fd.get("language") || "fr"), engines: readEngines(fd), title: String(fd.get("title") || "") || undefined });
   redirect(`/videos-ia/${ep.id}`);
 }
@@ -299,7 +328,7 @@ export async function createRemix(fd: FormData) {
   const url = String(fd.get("url") || "").trim() || null;
   const ep = await startEpisode(u.id, {
     brief: String(fd.get("brief") || "Reprends la mécanique de cette vidéo.").slice(0, 2000), origin: "remix", sourceUrl: url, durationSec: clampDur(fd.get("durationSec")),
-    characterId: String(fd.get("characterId") || "") || null, captionStyle: String(fd.get("captionStyle") || "bold"), language: String(fd.get("language") || "fr"),
+    story: await readStory(fd, u.id), captionStyle: String(fd.get("captionStyle") || "bold"), language: String(fd.get("language") || "fr"),
     engines: readEngines(fd), title: "Vidéo reprise", queue: !!url,
   });
   return { id: ep.id };
@@ -322,8 +351,51 @@ export async function rewriteEpisode(id: string) {
   const { episodeDir } = await import("@/lib/pipeline/episode");
   const dir = episodeDir(id);
   for (const f of fs.readdirSync(dir)) if (!f.startsWith("source")) fs.rmSync(`${dir}/${f}`, { force: true });
-  await prisma.episode.update({ where: { id }, data: { scriptJson: null, status: "queued", error: null, filePath: null, coverPath: null, thumbPath: null, progress: 0 } });
+  await prisma.episode.update({ where: { id }, data: { scriptJson: null, approved: false, status: "queued", error: null, filePath: null, coverPath: null, thumbPath: null, progress: 0 } });
   await enqueue("episode", { episodeId: id });
+  revalidatePath(`/videos-ia/${id}`);
+}
+
+// ——— Validation du storyboard (vidéos IA avec « valider avant la vidéo ») ———
+async function ownEpisodeInReview(id: string) {
+  const u = await requireUser();
+  const ep = await prisma.episode.findFirst({ where: { id, userId: u.id, status: "review" } });
+  if (!ep?.scriptJson) throw new Error("Vidéo introuvable ou déjà validée");
+  const { episodeDir } = await import("@/lib/pipeline/episode");
+  return { ep, dir: episodeDir(id) };
+}
+
+// Valide le script et les images : la voix et l'animation (la partie la plus chère) sont lancées.
+export async function approveEpisode(id: string) {
+  await ownEpisodeInReview(id);
+  await prisma.episode.update({ where: { id }, data: { approved: true, status: "queued", error: null } });
+  await enqueue("episode", { episodeId: id });
+  revalidatePath(`/videos-ia/${id}`);
+}
+
+// Refait l'image d'une scène (les autres sont gardées) ; la vidéo repasse ensuite en validation.
+export async function redoSceneImage(id: string, i: number) {
+  const { dir } = await ownEpisodeInReview(id);
+  const fs = await import("node:fs");
+  for (const f of [`img_${i}.png`, `scene_${i}.mp4`, `raw_${i}.mp4`, `av_${i}.mp4`]) fs.rmSync(`${dir}/${f}`, { force: true });
+  await prisma.episode.update({ where: { id }, data: { status: "queued", error: null } });
+  await enqueue("episode", { episodeId: id });
+  revalidatePath(`/videos-ia/${id}`);
+}
+
+// Corrige la réplique d'une scène avant la voix ; la description d'image peut aussi être changée (puis « Refaire l'image »).
+export async function updateScene(id: string, i: number, fd: FormData) {
+  const { ep, dir } = await ownEpisodeInReview(id);
+  const script = JSON.parse(ep.scriptJson!) as import("@/lib/pipeline/episode").Script;
+  const sc = script.scenes[i];
+  if (!sc) return;
+  sc.narration = String(fd.get("narration") || sc.narration).slice(0, 600);
+  const visual = String(fd.get("visual") || "").trim();
+  const fs = await import("node:fs");
+  if (visual && visual !== sc.visual) { sc.visual = visual.slice(0, 1500); fs.rmSync(`${dir}/img_${i}.png`, { force: true }); }
+  for (const f of [`voice_${i}.mp3`, `scene_${i}.mp4`, `raw_${i}.mp4`, `av_${i}.mp4`]) fs.rmSync(`${dir}/${f}`, { force: true });
+  await prisma.episode.update({ where: { id }, data: { scriptJson: JSON.stringify(script) } });
+  if (!fs.existsSync(`${dir}/img_${i}.png`)) { await prisma.episode.update({ where: { id }, data: { status: "queued" } }); await enqueue("episode", { episodeId: id }); }
   revalidatePath(`/videos-ia/${id}`);
 }
 
@@ -447,7 +519,7 @@ export async function runCoach(_: FormState, fd: FormData): Promise<FormState> {
   try {
     const out = await chat({
       userId: u.id, purpose: "coach", maxTokens: 3500,
-      system: "Tu es un coach TikTok francophone, concret et honnête. Tu t'appuies sur les chiffres fournis, tu n'inventes pas de statistiques. Réponds en Markdown simple avec des titres ##.",
+      system: `Tu es un coach TikTok francophone, concret et honnête, spécialiste des comptes de vidéos IA (mini-feuilletons de fruits ou d'objets qui parlent). Tu t'appuies sur les chiffres fournis, tu n'inventes pas de statistiques. Réponds en Markdown simple avec des titres ##.\n${COACH_RULES}`,
       user: `Niche : ${niche}\nObjectif : ${goal}\nPublications par semaine visées : ${freq}\nDonnées du compte : ${snapshot}\n\nDonne : 1) ## Diagnostic (ce qui marche / ce qui ne marche pas, d'après les vidéos), 2) ## Planning sur 7 jours (jour, heure conseillée, idée, format), 3) ## 3 scripts prêts à tourner (accroche 3 s, déroulé, appel à l'action), 4) ## Prochaines actions (3 points).`,
     });
     await prisma.coachReport.create({ data: { userId: u.id, input: JSON.stringify({ niche, goal, freq }), output: out } });

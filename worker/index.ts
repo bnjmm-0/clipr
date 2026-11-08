@@ -8,7 +8,7 @@ import { runTool } from "../lib/providers/tools";
 import { publishVideo } from "../lib/providers/tiktok";
 import { fbPublishReel } from "../lib/providers/facebook";
 import { ytPublishShort } from "../lib/providers/youtube";
-import { processEpisode } from "../lib/pipeline/episode";
+import { ensureCharacterRef, processEpisode } from "../lib/pipeline/episode";
 import { refreshTrends, REFRESH_HOURS } from "../lib/trends";
 import { snapshotUser } from "../lib/stats";
 import { featureEnabled } from "../lib/settings";
@@ -32,6 +32,11 @@ async function handle(job: { id: string; type: string; payload: string; projectI
       return;
     }
     case "episode": return processEpisode(p.episodeId);
+    case "character_ref": {
+      const c = await prisma.character.findUnique({ where: { id: p.characterId } });
+      if (c) await ensureCharacterRef(c, c.userId, p.engine, true);
+      return;
+    }
     case "trends": await refreshTrends(); return;
     case "stats": await snapshotUser(p.userId); return;
     case "publish": {

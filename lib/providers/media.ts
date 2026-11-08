@@ -1,15 +1,20 @@
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 import { getSettings, requireCredential } from "../settings";
 import { priceOf, recordUsage } from "../usage";
 import { apiError } from "./errors";
 import { TOOL_APPS, pickOptions } from "../ai-tools";
 
 // Texte → image : OpenAI Images ou Replicate. `engine` (lib/engines.ts) impose l'IA de la vidéo, sinon Réglages.
-export async function generateImage(prompt: string, outFile: string, userId: string, engine?: string | null) {
+// `refs` : images de référence (fiches des personnages) qui verrouillent l'apparence ; GPT Image et FLUX.2 les acceptent.
+export async function generateImage(prompt: string, outFile: string, userId: string, engine?: string | null, refs: string[] = []) {
   const s = await getSettings();
+  refs = refs.filter((f) => fs.existsSync(f));
   if (engine === "flux") {
-    const url = await replicateRun(TOOL_APPS.flux.model!, replicateInput("flux", prompt, { aspect_ratio: "9:16" }));
+    const input = replicateInput("flux", prompt, { aspect_ratio: "9:16" });
+    if (refs.length) input.input_images = refs.map((f) => dataUri(f));
+    const url = await replicateRun(TOOL_APPS.flux.model!, input);
     await download(url, outFile);
     await recordUsage({ userId, provider: "replicate", kind: "image", model: TOOL_APPS.flux.model, units: 1, unitLabel: "image", costUsd: priceOf("replicate:image", s.prices) });
     return outFile;
@@ -22,10 +27,20 @@ export async function generateImage(prompt: string, outFile: string, userId: str
     return outFile;
   }
   const key = await requireCredential("openai");
-  const r = await fetch(`${process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1"}/images/generations`, {
-    method: "POST", headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-    body: JSON.stringify({ model, prompt, size: "1024x1536", n: 1 }),
-  });
+  const base = process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1";
+  let r: Response;
+  if (refs.length && model.startsWith("gpt-image")) {
+    // Édition à partir des références : le modèle reprend l'apparence exacte des personnages joints.
+    const fd = new FormData();
+    fd.append("model", model); fd.append("prompt", prompt); fd.append("size", "1024x1536"); fd.append("n", "1");
+    for (const f of refs) fd.append("image[]", new Blob([fs.readFileSync(f)], { type: "image/png" }), path.basename(f));
+    r = await fetch(`${base}/images/edits`, { method: "POST", headers: { authorization: `Bearer ${key}` }, body: fd });
+  } else {
+    r = await fetch(`${base}/images/generations`, {
+      method: "POST", headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+      body: JSON.stringify({ model, prompt, size: "1024x1536", n: 1 }),
+    });
+  }
   const j = await r.json();
   if (!r.ok) throw apiError("OpenAI", r.status, j);
   const d = j.data?.[0];
@@ -36,13 +51,19 @@ export async function generateImage(prompt: string, outFile: string, userId: str
   return outFile;
 }
 
+// Nom du paramètre « image de départ » de chaque moteur vidéo sur Replicate.
+const START_IMAGE: Record<string, string> = { kling: "start_image", veo: "image", seedance: "image" };
+
 // Texte → vidéo sur Replicate : moteur de la vidéo (kling, veo, seedance), sinon le modèle de Réglages (ex. minimax/video-01).
-// Pour une scène de vidéo IA : format vertical, sans son (la voix off est posée ensuite).
-export async function generateVideo(prompt: string, outFile: string, userId: string, engine?: string | null) {
+// Pour une scène de vidéo IA : format vertical, sans son (la voix off est posée ensuite), et si possible
+// à partir de l'image de la scène (`startImage`) : le prompt ne décrit alors que le mouvement.
+export async function generateVideo(prompt: string, outFile: string, userId: string, engine?: string | null, startImage?: string) {
   const s = await getSettings();
   const model = engine ? TOOL_APPS[engine]?.model : s.videoModel;
   if (!model) throw new Error("Aucun modèle vidéo choisi : renseignez-le dans Réglages.");
-  const url = await replicateRun(model, engine ? replicateInput(engine, prompt, { aspect_ratio: "9:16", generate_audio: "false" }) : { prompt });
+  const input = engine ? replicateInput(engine, prompt, { aspect_ratio: "9:16", generate_audio: "false" }) : { prompt };
+  if (engine && startImage && fs.existsSync(startImage)) input[START_IMAGE[engine]] = dataUri(startImage);
+  const url = await replicateRun(model, input);
   await download(url, outFile);
   await recordUsage({ userId, provider: "replicate", kind: "video", model, units: 1, unitLabel: "vidéo", costUsd: priceOf("replicate:video", s.prices) });
   return outFile;
@@ -78,6 +99,12 @@ export async function replicateRun(model: string, input: Record<string, unknown>
   const out = Array.isArray(j.output) ? j.output[0] : j.output;
   if (typeof out !== "string") throw new Error("Sortie Replicate inattendue");
   return out;
+}
+
+// Image envoyée en ligne (data URI) : convertie en JPEG de 1080 px de large au plus pour rester légère.
+function dataUri(file: string) {
+  const jpg = execFileSync("ffmpeg", ["-v", "error", "-i", file, "-vf", "scale='min(1080,iw)':-2", "-q:v", "3", "-f", "image2pipe", "-vcodec", "mjpeg", "-"], { maxBuffer: 32 << 20 });
+  return `data:image/jpeg;base64,${jpg.toString("base64")}`;
 }
 
 export async function download(url: string, outFile: string) {

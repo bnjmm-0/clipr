@@ -84,6 +84,20 @@ Chaque étape enregistre son résultat : une relance reprend là où le traiteme
 La charte graphique suit le guide unslop (unslop par Damir Sokolovsky, @heydamir, CC BY 4.0) : une seule couleur d'accent,
 le jaune des sous-titres, et le « mot actif » comme signature.
 
+## Vidéos de personnages IA (fruits, objets, animaux qui parlent)
+
+- Fiche de référence : chaque personnage reçoit une image (vue de face, fond neutre) générée en arrière-plan
+  (tâche `character_ref`) ; elle est jointe à chaque image où il apparaît (GPT Image : `/images/edits` ;
+  FLUX.2 : `input_images`) pour qu'il reste identique. En plans vidéo, chaque plan part de l'image de la scène
+  (`start_image` pour Kling, `image` pour Veo et Seedance).
+- Dialogue : plusieurs personnages cochés + format « Dialogue » ; chaque réplique est dite avec la voix de son
+  personnage (OpenAI dirigée par sa personnalité, ou ElevenLabs).
+- Validation : avec « Valider avant la vidéo », le worker s'arrête après le script et les images (statut
+  `review`) ; on corrige une réplique ou une image, puis « Valider et créer la vidéo » lance voix et animation.
+- Règles de prompts (scénario, image, mouvement, voix, stratégie) : `lib/prompting.ts`.
+- Statistiques : « pépites » (vidéos à 5 × les vues habituelles, médiane du compte) et rythme de publication ;
+  le Coach TikTok suit les mêmes règles de stratégie.
+
 ## IA au choix pour chaque vidéo
 
 Les formulaires (Vidéos IA, série, Reprendre une vidéo, Nouveau projet de clips) proposent l'IA à utiliser :

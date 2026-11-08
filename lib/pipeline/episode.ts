@@ -12,8 +12,12 @@ import { makeCover } from "./cover";
 import { scheduleAuto } from "../autopublish";
 import { getSettings } from "../settings";
 import { scriptModel } from "../engines";
+import { MOTION_RULES, SCRIPT_RULES, SERIES_RULES, VISUAL_RULES, referencePrompt, voiceDirection } from "../prompting";
+import type { Character } from "@prisma/client";
 
-export type Script = { title: string; hook: string; summary: string; scenes: { narration: string; visual: string }[] };
+// speaker : nom du personnage qui dit la réplique (format dialogue) ; motion : prompt de mouvement (plans vidéo).
+export type Scene = { speaker?: string; narration: string; visual: string; motion?: string };
+export type Script = { title: string; hook: string; summary: string; scenes: Scene[] };
 
 export function episodeDir(id: string) {
   const d = path.join(STORAGE_DIR, "episodes", id);
@@ -58,39 +62,80 @@ async function sourceTranscript(ep: { id: string; sourceUrl: string | null; user
   return { text: text.trim(), duration };
 }
 
+type EpisodeWithSeries = NonNullable<Awaited<ReturnType<typeof loadEpisode>>>;
+const loadEpisode = (id: string) => prisma.episode.findUniqueOrThrow({ where: { id }, include: { series: { include: { character: true } } } });
+
+// Distribution : les personnages choisis (castJson), sinon le personnage de la série ou de la vidéo.
+export async function loadCast(ep: EpisodeWithSeries): Promise<Character[]> {
+  const ids: string[] = ep.castJson ? JSON.parse(ep.castJson) : [ep.series?.characterId ?? ep.characterId].filter((x): x is string => !!x);
+  const rows = await prisma.character.findMany({ where: { id: { in: ids }, userId: ep.userId } });
+  return ids.map((id) => rows.find((r) => r.id === id)).filter((c): c is Character => !!c);
+}
+
+// Personnages présents dans une scène : celui qui parle et ceux nommés dans la description de l'image.
+export function castIn(scene: Scene, cast: Character[]) {
+  const text = `${scene.speaker ?? ""} ${scene.visual}`.toLowerCase();
+  const present = cast.filter((c) => text.includes(c.name.toLowerCase()));
+  return present.length || cast.length !== 1 ? present : cast;
+}
+
+// Fiche de référence d'un personnage (générée une fois, puis jointe à chaque image où il apparaît).
+export async function ensureCharacterRef(c: Character, userId: string, engine?: string | null, force = false) {
+  if (!force && c.refImagePath && fs.existsSync(c.refImagePath)) return c.refImagePath;
+  const dir = path.join(STORAGE_DIR, "characters");
+  fs.mkdirSync(dir, { recursive: true });
+  const file = path.join(dir, `${c.id}.png`);
+  await generateImage(referencePrompt(c), file, userId, engine);
+  await prisma.character.update({ where: { id: c.id }, data: { refImagePath: file } });
+  c.refImagePath = file;
+  return file;
+}
+
 export async function writeScript(episodeId: string): Promise<Script> {
-  const ep = await prisma.episode.findUniqueOrThrow({ where: { id: episodeId }, include: { series: { include: { character: true } } } });
-  const character = ep.series?.character ?? (ep.characterId ? await prisma.character.findUnique({ where: { id: ep.characterId } }) : null);
+  const ep = await loadEpisode(episodeId);
+  const cast = await loadCast(ep);
+  const dialogue = ep.format === "dialogue" && cast.length > 0;
   const n = sceneCount(ep.durationSec);
   const words = Math.round(ep.durationSec * 2.4);
   let context = "";
   if (ep.series) {
     const prev = await prisma.episode.findMany({ where: { seriesId: ep.seriesId, number: { lt: ep.number }, scriptJson: { not: null } }, orderBy: { number: "desc" }, take: 6 });
-    context += `\nSérie « ${ep.series.title} » : ${ep.series.premise}\nÉpisode n°${ep.number}.`;
+    context += `\nSérie « ${ep.series.title} » : ${ep.series.premise}\nÉpisode n°${ep.number}.\n${SERIES_RULES}`;
     if (prev.length) context += `\nÉpisodes précédents (du plus récent au plus ancien) :\n${prev.map((p) => `- n°${p.number} « ${p.title} » : ${(JSON.parse(p.scriptJson!) as Script).summary}`).join("\n")}\nFais avancer l'histoire sans répéter ces épisodes.`;
   }
   if (ep.origin === "remix") {
     const t = await sourceTranscript(ep);
-    context += `\nVIDÉO À REPRENDRE (transcription, ${Math.round(t.duration)} s) :\n${t.text.slice(0, 14000)}\nAnalyse sa structure (accroche, enchaînement, rythme, chute) et écris une version ORIGINALE qui reprend cette mécanique, avec tes propres phrases et le personnage ci-dessous. Ne recopie aucune phrase.`;
+    context += `\nVIDÉO À REPRENDRE (transcription, ${Math.round(t.duration)} s) :\n${t.text.slice(0, 14000)}\nAnalyse sa structure (accroche, enchaînement, rythme, chute) et écris une version ORIGINALE qui reprend cette mécanique, avec tes propres phrases et les personnages ci-dessous. Ne recopie aucune phrase.`;
   }
-  if (character) context += `\nPersonnage principal : ${character.name}. Apparence : ${character.look}. Personnalité : ${character.personality || "à ta guise"}.`;
+  if (cast.length) context += `\nPersonnages (chacun a une image de référence qui fixe son apparence) :\n${cast.map((c) => `- ${c.name} : ${c.look}. Personnalité : ${c.personality || "à ta guise"}.`).join("\n")}`;
+  const style = cast.find((c) => c.visualStyle)?.visualStyle;
+  const video = ep.visualMode === "video";
+  const sceneShape = `{${dialogue ? `"speaker":"nom exact du personnage qui parle, ou Narrateur",` : ""}"narration":"${dialogue ? "réplique dite par ce personnage" : "texte lu en voix off"}","visual":"..."${video ? ',"motion":"..."' : ""}}`;
   const out = await chat({
-    userId: ep.userId, purpose: "script vidéo IA", json: true, maxTokens: Math.min(12000, 1500 + n * 160), ...scriptModel(ep.engineScript, await getSettings()),
-    system: "Tu es scénariste de vidéos verticales courtes (TikTok, Reels, Shorts). Accroche forte dans les 3 premières secondes, phrases courtes à l'oral, une idée par scène, chute nette.",
-    user: `Langue : ${ep.language}. Durée visée : ${ep.durationSec} s, environ ${words} mots de narration au total, en ${n} scènes.
+    userId: ep.userId, purpose: "script vidéo IA", json: true, maxTokens: Math.min(12000, 1500 + n * 220), ...scriptModel(ep.engineScript, await getSettings()),
+    system: `Tu es scénariste et réalisateur de vidéos verticales courtes (TikTok, Reels, Shorts), spécialiste des mini-feuilletons de personnages IA (fruits, objets, animaux qui parlent).\n${SCRIPT_RULES}\n${VISUAL_RULES}${video ? `\n${MOTION_RULES}` : ""}`,
+    user: `Langue des répliques : ${ep.language}. Durée visée : ${ep.durationSec} s, environ ${words} mots ${dialogue ? "de dialogue" : "de narration"} au total, en ${n} scènes.
 Consigne : ${ep.brief}${context}
-Pour chaque scène : "narration" (texte lu en voix off) et "visual" (description en anglais d'une image verticale 9:16 pour un générateur d'images : sujet, action, cadrage, lumière${character ? `, et reprends toujours l'apparence exacte du personnage : ${character.look}` : ""}${character?.visualStyle ? `, style ${character.visualStyle}` : ""}). Pas de texte dans les images.
-JSON : {"title":"titre court","hook":"accroche affichée au début (max 8 mots)","summary":"résumé en 2 phrases pour la mémoire de la série","scenes":[{"narration":"...","visual":"..."}]}`,
+${dialogue ? `Format DIALOGUE : chaque scène est une réplique d'un seul personnage, qui est au centre de l'image en train de parler ; alterne les personnages comme dans une scène de série ; "Narrateur" seulement si c'est indispensable.` : "Format NARRATION : une voix off raconte, les images montrent l'action."}
+Dans "visual", nomme les personnages présents par leur nom exact${style ? ` ; style visuel : ${style}` : ""}.
+JSON : {"title":"titre court","hook":"accroche affichée au début (max 8 mots)","summary":"résumé en 2 phrases pour la mémoire de la série","scenes":[${sceneShape}]}`,
   });
   const s = parseJsonLoose<Script>(out);
   if (!s.scenes?.length) throw new Error("Le script généré est vide");
   return s;
 }
 
+// Prompt d'image d'une scène : annonce les références jointes, puis la description écrite par le scénariste.
+export function scenePrompt(sc: Scene, present: Character[]) {
+  const refs = present.filter((c) => c.refImagePath);
+  const lock = refs.length ? `Reference images: ${refs.map((c, i) => `image ${i + 1} = ${c.name}`).join(", ")}. Keep each character 100% identical to their reference image (shape, colors, face, outfit). ` : "";
+  return `${lock}${sc.visual}. Vertical 9:16 composition, no text, no watermark.`;
+}
+
 export async function processEpisode(episodeId: string) {
-  let ep = await prisma.episode.findUniqueOrThrow({ where: { id: episodeId }, include: { series: { include: { character: true } } } });
+  let ep = await loadEpisode(episodeId);
   const dir = episodeDir(ep.id);
-  const character = ep.series?.character ?? (ep.characterId ? await prisma.character.findUnique({ where: { id: ep.characterId } }) : null);
+  const cast = await loadCast(ep);
 
   // 1. Script (enregistré : une reprise après échec ne le régénère pas)
   await stage(ep.id, ep.origin === "remix" ? "analyse de la vidéo" : "script", 5);
@@ -101,28 +146,46 @@ export async function processEpisode(episodeId: string) {
   const script = JSON.parse(ep.scriptJson!) as Script;
   const n = script.scenes.length;
 
-  // 2. Voix off et 3. visuels, scène par scène
+  // 2. Fiches des personnages, puis l'image de chaque scène (elle sert aussi d'image de départ aux plans vidéo)
+  await stage(ep.id, "fiches des personnages", 8);
+  for (const c of cast) await ensureCharacterRef(c, ep.userId, ep.engineImage);
+  for (let i = 0; i < n; i++) {
+    const img = path.join(dir, `img_${i}.png`);
+    if (fs.existsSync(img)) continue;
+    await stage(ep.id, `images ${i + 1}/${n}`, 10 + Math.round((35 * i) / n));
+    const present = castIn(script.scenes[i], cast);
+    await generateImage(scenePrompt(script.scenes[i], present), img, ep.userId, ep.engineImage, present.map((c) => c.refImagePath!).filter(Boolean));
+  }
+
+  // 3. Validation : on s'arrête avant la voix et la vidéo (la partie la plus chère) tant que le storyboard n'est pas validé.
+  if (ep.review && !ep.approved) {
+    await prisma.episode.update({ where: { id: ep.id }, data: { status: "review", stage: "à valider", progress: 45 } });
+    return;
+  }
+
+  // 4. Voix (celle du personnage qui parle) et visuels, scène par scène
   const words: Word[] = [];
   const parts: string[] = [];
   let t = 0;
   for (let i = 0; i < n; i++) {
     const sc = script.scenes[i];
     const voice = path.join(dir, `voice_${i}.mp3`);
-    await stage(ep.id, `voix et visuels ${i + 1}/${n}`, 10 + Math.round((70 * i) / n));
-    if (!fs.existsSync(voice)) await speak(sc.narration, ep.voice || character?.voice || "alloy", voice, ep.userId, "Ton dynamique de créateur de contenu, rythme soutenu.");
+    await stage(ep.id, `voix et animation ${i + 1}/${n}`, 45 + Math.round((40 * i) / n));
+    const speaker = ep.format === "dialogue" ? cast.find((c) => c.name.toLowerCase() === (sc.speaker ?? "").toLowerCase()) : cast[0];
+    const voiceId = ep.format === "dialogue" ? speaker?.voice ?? (ep.voice || "alloy") : ep.voice || speaker?.voice || "alloy";
+    if (!fs.existsSync(voice)) await speak(sc.narration, voiceId, voice, ep.userId, voiceDirection(speaker));
     const dur = (await probe(voice)).duration + 0.12;
     words.push(...timeWords(sc.narration, t, dur - 0.12));
+    const img = path.join(dir, `img_${i}.png`);
     const part = path.join(dir, `scene_${i}.mp4`);
     if (!fs.existsSync(part)) {
-      const prompt = `${sc.visual}. Vertical 9:16 composition, no text, no watermark.`;
       if (ep.visualMode === "video") {
         const raw = path.join(dir, `raw_${i}.mp4`);
-        if (!fs.existsSync(raw)) await generateVideo(prompt, raw, ep.userId, ep.engineVideo);
+        const motion = sc.motion || `${sc.visual}. Slow push-in, the characters move naturally. Keep everything exactly as in the starting image. No text, no logo.`;
+        if (!fs.existsSync(raw)) await generateVideo(motion, raw, ep.userId, ep.engineVideo, img);
         await run("ffmpeg", ["-y", "-v", "error", "-stream_loop", "-1", "-i", raw, "-t", dur.toFixed(2), "-an",
           "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30,setsar=1", "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", part]);
       } else {
-        const img = path.join(dir, `img_${i}.png`);
-        if (!fs.existsSync(img)) await generateImage(prompt, img, ep.userId, ep.engineImage);
         const frames = Math.ceil(dur * 30);
         // Mouvement de caméra lent (zoom avant, zoom arrière ou travelling) qui change à chaque scène.
         const moves = [
@@ -143,8 +206,8 @@ export async function processEpisode(episodeId: string) {
     t += dur;
   }
 
-  // 4. Montage, sous-titres animés, titre d'accroche, barre de progression
-  await stage(ep.id, "montage", 85);
+  // 5. Montage, sous-titres animés, titre d'accroche, barre de progression
+  await stage(ep.id, "montage", 87);
   const list = path.join(dir, "concat.txt");
   fs.writeFileSync(list, parts.map((p) => `file '${p.replace(/'/g, "'\\''")}'`).join("\n"));
   const joined = path.join(dir, "joined.mp4");
@@ -153,7 +216,7 @@ export async function processEpisode(episodeId: string) {
   const thumb = path.join(dir, "thumb.jpg");
   await renderClip({ src: joined, srcW: 1080, srcH: 1920, s: 0, e: t, words, style: ep.captionStyle, hook: script.hook, cropMode: "none", cropOffset: 0.5, keyframes: [], outFile: out, thumbFile: thumb });
 
-  // 5. Miniature
+  // 6. Miniature
   await stage(ep.id, "miniature", 95);
   const cover = path.join(dir, "cover.jpg");
   await makeCover(joined, script.hook || ep.title, cover).catch((e) => console.error("miniature", e.message));
