@@ -18,6 +18,8 @@ test("vidéos IA : nombre de scènes et minutage des mots", async () => {
   assert.equal(w.length, 6);
   assert.ok(w[0].s === 10 && w.at(-1)!.e <= 13);
   for (let i = 1; i < w.length; i++) assert.ok(w[i].s >= w[i - 1].e);
+  // « ? » et « ! » restent collés au mot d'avant (jamais seuls à l'écran)
+  assert.deepEqual(timeWords("Toi et Kiwi ? Non !", 0, 2).map((x) => x.w), ["Toi", "et", "Kiwi ?", "Non !"]);
 });
 
 test("YouTube : titre et description de Short, visibilité", async () => {

@@ -35,7 +35,12 @@ export function sceneCount(durationSec: number, perScene = 6) {
 
 // Répartit les mots d'une narration sur sa durée, au prorata de leur longueur (sous-titres mot à mot sans coût de transcription).
 export function timeWords(text: string, start: number, dur: number): Word[] {
-  const ws = text.split(/\s+/).filter(Boolean);
+  // En français, « ? », « ! », « : » ou « » » sont précédés d'une espace : on les recolle au mot d'avant
+  // pour qu'ils ne s'affichent pas seuls en sous-titre.
+  const ws = text.split(/\s+/).filter(Boolean).reduce<string[]>((a, w) => {
+    if (a.length && /^[?!:;»…]+$/.test(w)) a[a.length - 1] += `\u00a0${w}`; else a.push(w);
+    return a;
+  }, []);
   const weight = ws.map((w) => w.length + 2);
   const total = weight.reduce((a, b) => a + b, 0) || 1;
   let t = start;
