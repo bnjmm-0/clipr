@@ -7,6 +7,8 @@
 # Relançable sans risque : chaque étape vérifie ce qui existe déjà.
 set -euo pipefail
 export HOME="${HOME:-/root}"
+# Git lancé en tant que clipr échoue si le dossier courant lui est illisible (ex. /root) : on part de /.
+cd /
 
 DOMAINE="${DOMAINE:?Indique le domaine, ex. DOMAINE=getclipr.com}"
 EMAIL="${EMAIL:-}"   # facultatif : sert aux alertes d'expiration du certificat HTTPS
