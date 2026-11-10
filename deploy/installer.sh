@@ -7,6 +7,8 @@
 # Relançable sans risque : chaque étape vérifie ce qui existe déjà.
 set -euo pipefail
 export HOME="${HOME:-/root}"
+# Git lancé en tant que clipr échoue si le dossier courant lui est illisible (ex. /root) : on part de /.
+cd /
 
 DOMAINE="${DOMAINE:?Indique le domaine, ex. DOMAINE=getclipr.com}"
 EMAIL="${EMAIL:-}"   # facultatif : sert aux alertes d'expiration du certificat HTTPS
@@ -51,7 +53,8 @@ if [[ "$DEPOT" == git@* ]]; then
   if [ ! -f "$K" ]; then
     sudo -H -u $APP_USER ssh-keygen -q -t ed25519 -N "" -C "clipr-vps" -f "$K"
   fi
-  sudo -H -u $APP_USER bash -c "ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts 2>/dev/null; sort -u -o ~/.ssh/known_hosts ~/.ssh/known_hosts"
+  # Accepte la clé d'hôte de GitHub à la première connexion (sans terminal pour répondre « yes »).
+  sudo -H -u $APP_USER git config --global core.sshCommand "ssh -o StrictHostKeyChecking=accept-new"
   until sudo -H -u $APP_USER git ls-remote "$DEPOT" >/dev/null 2>&1; do
     if [ ! -t 0 ]; then echo "    En attente de la clé de déploiement sur GitHub..."; sleep 30; continue; fi
     echo
