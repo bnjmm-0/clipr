@@ -64,6 +64,11 @@ if [[ "$DEPOT" == git@* ]]; then
 fi
 if [ ! -d "$APP_DIR/.git" ]; then sudo -H -u $APP_USER git clone --branch "$BRANCHE" "$DEPOT" "$APP_DIR"
 else sudo -H -u $APP_USER git -C "$APP_DIR" pull --ff-only; fi
+# Le kit deploy/ doit être sur la branche (PR fusionnée) : on attend qu'il arrive.
+until [ -f "$APP_DIR/deploy/mettre-a-jour.sh" ]; do
+  echo "    En attente du dossier deploy/ sur la branche $BRANCHE (fusionner la PR)..."; sleep 30
+  sudo -H -u $APP_USER git -C "$APP_DIR" pull --ff-only || true
+done
 
 echo "==> 5/8 Fichier .env"
 if [ ! -f "$APP_DIR/.env" ]; then
