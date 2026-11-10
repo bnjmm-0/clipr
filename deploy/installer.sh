@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 # Installation de Clipr sur un VPS Ubuntu 24.04 neuf (Hostinger ou autre).
 # À lancer en root sur le VPS :
-#   DOMAINE=getclipr.com EMAIL=toi@exemple.com bash installer.sh
+#   DOMAINE=getclipr.com bash installer.sh        (EMAIL=... facultatif)
 # Le dépôt étant privé, le script crée une « clé de déploiement » (lecture seule), l'affiche et attend
 # qu'elle soit ajoutée sur GitHub : dépôt > Settings > Deploy keys > Add deploy key.
 # Relançable sans risque : chaque étape vérifie ce qui existe déjà.
 set -euo pipefail
+export HOME="${HOME:-/root}"
 
 DOMAINE="${DOMAINE:?Indique le domaine, ex. DOMAINE=getclipr.com}"
-EMAIL="${EMAIL:?Indique un email pour le certificat HTTPS, ex. EMAIL=toi@exemple.com}"
+EMAIL="${EMAIL:-}"   # facultatif : sert aux alertes d'expiration du certificat HTTPS
 DEPOT="${DEPOT:-git@github.com:bnjmm-0/clipr.git}"
 BRANCHE="${BRANCHE:-main}"
 APP_USER=clipr
@@ -17,12 +18,12 @@ STORAGE=/home/$APP_USER/storage
 
 echo "==> 1/8 Paquets système (FFmpeg, Python, PostgreSQL, Nginx, polices)"
 export DEBIAN_FRONTEND=noninteractive
-apt-get update -y
-apt-get install -y ca-certificates curl git ffmpeg python3 python3-venv postgresql nginx \
+apt-get -o DPkg::Lock::Timeout=900 update -y
+apt-get -o DPkg::Lock::Timeout=900 install -y ca-certificates curl git ffmpeg python3 python3-venv postgresql nginx \
   certbot python3-certbot-nginx fonts-dejavu-core ufw openssl
 if ! command -v node >/dev/null || [ "$(node -v | cut -c2- | cut -d. -f1)" -lt 20 ]; then
   curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
-  apt-get install -y nodejs
+  apt-get -o DPkg::Lock::Timeout=900 install -y nodejs
 fi
 command -v pm2 >/dev/null || npm install -g pm2
 
@@ -42,12 +43,17 @@ sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='clipr'" | gr
 echo "==> 4/8 Code de l'appli"
 if [[ "$DEPOT" == git@* ]]; then
   K=/home/$APP_USER/.ssh/id_ed25519
-  if [ ! -f "$K" ]; then
-    sudo -u $APP_USER mkdir -p -m 700 /home/$APP_USER/.ssh
-    sudo -u $APP_USER ssh-keygen -q -t ed25519 -N "" -C "clipr-vps" -f "$K"
+  sudo -H -u $APP_USER mkdir -p -m 700 /home/$APP_USER/.ssh
+  if [ -n "${CLE_DEPLOIEMENT:-}" ] && [ ! -f "$K" ]; then
+    install -o $APP_USER -g $APP_USER -m 600 "$CLE_DEPLOIEMENT" "$K"
+    sudo -H -u $APP_USER ssh-keygen -y -f "$K" > "$K.pub"
   fi
-  sudo -u $APP_USER bash -c "ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts 2>/dev/null; sort -u -o ~/.ssh/known_hosts ~/.ssh/known_hosts"
-  until sudo -u $APP_USER git ls-remote "$DEPOT" >/dev/null 2>&1; do
+  if [ ! -f "$K" ]; then
+    sudo -H -u $APP_USER ssh-keygen -q -t ed25519 -N "" -C "clipr-vps" -f "$K"
+  fi
+  sudo -H -u $APP_USER bash -c "ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts 2>/dev/null; sort -u -o ~/.ssh/known_hosts ~/.ssh/known_hosts"
+  until sudo -H -u $APP_USER git ls-remote "$DEPOT" >/dev/null 2>&1; do
+    if [ ! -t 0 ]; then echo "    En attente de la clé de déploiement sur GitHub..."; sleep 30; continue; fi
     echo
     echo "    Ajoute cette clé sur GitHub (dépôt > Settings > Deploy keys > Add deploy key, sans cocher l'écriture) :"
     echo
@@ -56,8 +62,8 @@ if [[ "$DEPOT" == git@* ]]; then
     read -r -p "    Appuie sur Entrée une fois la clé ajoutée... " _ </dev/tty
   done
 fi
-if [ ! -d "$APP_DIR/.git" ]; then sudo -u $APP_USER git clone --branch "$BRANCHE" "$DEPOT" "$APP_DIR"
-else sudo -u $APP_USER git -C "$APP_DIR" pull --ff-only; fi
+if [ ! -d "$APP_DIR/.git" ]; then sudo -H -u $APP_USER git clone --branch "$BRANCHE" "$DEPOT" "$APP_DIR"
+else sudo -H -u $APP_USER git -C "$APP_DIR" pull --ff-only; fi
 
 echo "==> 5/8 Fichier .env"
 if [ ! -f "$APP_DIR/.env" ]; then
@@ -75,10 +81,10 @@ ENV
 fi
 
 echo "==> 6/8 Dépendances, base, build"
-sudo -u $APP_USER bash -lc "cd $APP_DIR && bash deploy/mettre-a-jour.sh --sans-redemarrage"
+sudo -H -u $APP_USER bash -lc "cd $APP_DIR && bash deploy/mettre-a-jour.sh --sans-redemarrage"
 
 echo "==> 7/8 Démarrage permanent (PM2)"
-sudo -u $APP_USER bash -lc "cd $APP_DIR && pm2 startOrReload deploy/ecosystem.config.cjs && pm2 save"
+sudo -H -u $APP_USER bash -lc "cd $APP_DIR && pm2 startOrReload deploy/ecosystem.config.cjs && pm2 save"
 env PATH=$PATH:/usr/bin pm2 startup systemd -u $APP_USER --hp /home/$APP_USER >/dev/null
 
 echo "==> 8/8 Nginx + HTTPS"
@@ -86,7 +92,8 @@ sed "s/__DOMAINE__/$DOMAINE/g" "$APP_DIR/deploy/nginx.conf" > /etc/nginx/sites-a
 ln -sf /etc/nginx/sites-available/clipr /etc/nginx/sites-enabled/clipr
 rm -f /etc/nginx/sites-enabled/default
 nginx -t && systemctl reload nginx
-certbot --nginx --non-interactive --agree-tos -m "$EMAIL" -d "$DOMAINE" -d "www.$DOMAINE" --redirect \
+if [ -n "$EMAIL" ]; then CB_MAIL=(-m "$EMAIL"); else CB_MAIL=(--register-unsafely-without-email); fi
+certbot --nginx --non-interactive --agree-tos "${CB_MAIL[@]}" -d "$DOMAINE" -d "www.$DOMAINE" --redirect \
   || echo "    HTTPS pas encore posé : vérifie que le DNS de $DOMAINE pointe vers ce serveur, puis relance ce script."
 
 echo

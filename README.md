@@ -159,7 +159,7 @@ HTTPS (Certbot), et PM2 qui garde le site et le worker allumés.
 
 1. Faire pointer le domaine vers l'IP du VPS (enregistrements A pour `@` et `www`).
 2. Copier `deploy/installer.sh` sur le VPS, puis en root :
-   `DOMAINE=getclipr.com EMAIL=toi@exemple.com bash installer.sh`
+   `DOMAINE=getclipr.com bash installer.sh` (EMAIL=… facultatif)
    Le script affiche une clé de déploiement à ajouter dans GitHub (Settings > Deploy keys), crée la base,
    le `.env` (avec une `ENCRYPTION_KEY` neuve, **à sauvegarder ailleurs**) et pose le HTTPS.
 3. Dans les consoles développeur, déclarer les adresses de retour :
