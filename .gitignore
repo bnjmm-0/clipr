@@ -5,3 +5,4 @@ node_modules
 *.db-journal
 storage
 .venv
+prisma/schema.prod.prisma

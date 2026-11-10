@@ -151,3 +151,20 @@ npm test   # chiffrement, candidats, sous-titres ASS, rendu FFmpeg 9:16 réel
 `tests/mock-openai.mjs` simule OpenAI, YouTube et Google Trends pour un essai de bout en bout sans frais
 (données d'exemple) : `OPENAI_BASE_URL=http://127.0.0.1:4010/v1 YOUTUBE_API_BASE=http://127.0.0.1:4010/youtube TRENDS_RSS_URL=http://127.0.0.1:4010/rss`
 avant `npm start` et `npm run worker`.
+
+## Hébergement sur un VPS (Hostinger KVM 2 ou autre, Ubuntu 24.04)
+
+Le dossier `deploy/` installe tout sur un serveur neuf : FFmpeg, Python + OpenCV, yt-dlp, PostgreSQL, Nginx,
+HTTPS (Certbot), et PM2 qui garde le site et le worker allumés.
+
+1. Faire pointer le domaine vers l'IP du VPS (enregistrements A pour `@` et `www`).
+2. Copier `deploy/installer.sh` sur le VPS, puis en root :
+   `DOMAINE=getclipr.com bash installer.sh` (EMAIL=… facultatif)
+   Le script affiche une clé de déploiement à ajouter dans GitHub (Settings > Deploy keys), crée la base,
+   le `.env` (avec une `ENCRYPTION_KEY` neuve, **à sauvegarder ailleurs**) et pose le HTTPS.
+3. Dans les consoles développeur, déclarer les adresses de retour :
+   `https://DOMAINE/api/tiktok/callback`, `https://DOMAINE/api/youtube/callback`, `https://DOMAINE/api/facebook/callback`.
+4. Ouvrir le site et créer le premier compte (administrateur).
+
+Mises à jour : `sudo -iu clipr` puis `cd app && bash deploy/mettre-a-jour.sh`.
+Le schéma Prisma du dépôt reste en SQLite pour le développement ; le serveur en dérive `prisma/schema.prod.prisma` en PostgreSQL.
