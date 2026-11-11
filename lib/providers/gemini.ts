@@ -15,17 +15,47 @@ export const GEMINI_VIDEO = "gemini-omni-1.2-flash";
 type Block = { type?: string; text?: string; data?: string; uri?: string; mime_type?: string };
 export type Interaction = { status?: string; steps?: { type?: string; content?: Block[] }[]; outputs?: Block[]; usage?: { total_input_tokens?: number; total_output_tokens?: number } };
 
-export async function interact(body: Record<string, unknown>): Promise<Interaction> {
-  const key = await requireCredential("google");
-  const r = await fetch(`${GEMINI_URL()}/interactions`, {
-    method: "POST",
-    headers: { "x-goog-api-key": key, "content-type": "application/json", "api-revision": "2026-05-20" },
-    body: JSON.stringify({ store: false, ...body }),
-  });
+// Modèles de secours quand un modèle de texte est saturé chez Google (« high demand »).
+const FALLBACK: Record<string, string[]> = { "gemini-3.8-flash": ["gemini-3.6-flash", "gemini-3.5-flash-lite"], "gemini-3.6-flash": ["gemini-3.5-flash-lite"] };
+const WAIT_MS = [2000, 6000, 15000];
+// Erreur passagère : coupure réseau, modèle saturé (429/500/503). On réessaie, puis on passe au modèle de secours.
+class Busy extends Error {}
+
+async function once(body: Record<string, unknown>, key: string): Promise<Interaction> {
+  let r: Response;
+  try {
+    r = await fetch(`${GEMINI_URL()}/interactions`, {
+      method: "POST",
+      headers: { "x-goog-api-key": key, "content-type": "application/json", "api-revision": "2026-05-20" },
+      body: JSON.stringify({ store: false, ...body }),
+    });
+  } catch (e) {
+    const code = (e as { cause?: { code?: string } }).cause?.code;
+    throw new Busy(`Connexion à Gemini impossible${code ? ` (${code})` : ""} : vérifie ta connexion internet, puis relance.`);
+  }
   const j = await r.json().catch(() => ({}));
+  const raw = JSON.stringify(j);
+  if (r.status === 429) throw new Busy("Gemini limite le nombre de demandes : attends une minute (ou active la facturation sur AI Studio), puis relance.");
+  if (r.status >= 500 || /high demand|overloaded|UNAVAILABLE/i.test(raw)) throw new Busy("Gemini est saturé en ce moment chez Google : relance dans quelques minutes.");
   if (!r.ok) throw apiError("Gemini", r.status, j);
   if (j.status && j.status !== "completed") throw new Error(`Gemini : génération ${j.status === "failed" ? "refusée ou échouée" : j.status}`);
   return j;
+}
+
+export async function interact(body: Record<string, unknown>): Promise<Interaction> {
+  const key = await requireCredential("google");
+  const models = [String(body.model), ...(FALLBACK[String(body.model)] ?? [])];
+  let last: Error = new Error("Gemini : aucune réponse");
+  for (const model of models) {
+    for (let i = 0; i <= WAIT_MS.length; i++) {
+      try { return await once({ ...body, model }, key); } catch (e) {
+        if (!(e instanceof Busy)) throw e;
+        last = e;
+        if (i < WAIT_MS.length) await new Promise((res) => setTimeout(res, WAIT_MS[i]));
+      }
+    }
+  }
+  throw last;
 }
 
 // Blocs produits par le modèle (on ignore ce qui a été envoyé, les étapes « user_input »).
