@@ -14,6 +14,7 @@ import { IMAGE_ENGINES, SCRIPT_ENGINES, isElevenVoice, parseVisuals, pickEngine 
 import { VOICES } from "@/lib/providers/tts";
 import { COACH_RULES } from "@/lib/prompting";
 import { readStoryOptions } from "@/lib/story-options";
+import { IMPORT_MAX_BYTES, IMPORT_TYPES, saveCharacterImage } from "@/lib/character-import";
 
 export type FormState = { error?: string; ok?: string } | undefined;
 
@@ -229,6 +230,38 @@ export async function createCharacter(fd: FormData) {
   // Fiche de référence en arrière-plan : 3 propositions au choix depuis le créateur de personnages.
   await enqueue("character_ref", { characterId: c.id, variants: fd.get("variants") === "3" ? 3 : 1 });
   revalidatePath("/videos-ia");
+  revalidatePath("/personnages");
+}
+
+// Personnage fait ailleurs : son image devient la fiche de référence (aucune génération),
+// puis le worker l'analyse une fois pour écrire sa description courte.
+export async function importCharacter(fd: FormData): Promise<{ error?: string }> {
+  const u = await requireUser();
+  const file = fd.get("image");
+  // Blob plutôt que File : File n'est pas global sous Node 18.
+  if (!(file instanceof Blob) || !file.size) return { error: "Choisis une image de ton personnage." };
+  if (!IMPORT_TYPES.includes(file.type)) return { error: "Format non pris en charge : utilise une image PNG, JPEG ou WebP." };
+  if (file.size > IMPORT_MAX_BYTES) return { error: "Image trop lourde (2 Mo maximum)." };
+  const voice = String(fd.get("voice") || "alloy");
+  const c = await prisma.character.create({ data: { userId: u.id, name: String(fd.get("name") || "").trim().slice(0, 60), look: "", personality: String(fd.get("personality") || "").trim().slice(0, 600), voice: isElevenVoice(voice) || VOICES.includes(voice) ? voice : "alloy" } });
+  try {
+    await prisma.character.update({ where: { id: c.id }, data: { refImagePath: await saveCharacterImage(c.id, file) } });
+  } catch {
+    await prisma.character.delete({ where: { id: c.id } });
+    return { error: "Image illisible : essaie avec un autre fichier." };
+  }
+  await enqueue("character_analyze", { characterId: c.id });
+  revalidatePath("/personnages");
+  revalidatePath("/videos-ia");
+  return {};
+}
+
+// Relance l'analyse d'un personnage importé (après une erreur, ou pour réécrire sa description).
+export async function reanalyzeCharacter(id: string) {
+  const u = await requireUser();
+  const c = await prisma.character.findFirst({ where: { id, userId: u.id } });
+  if (!c) return;
+  await enqueue("character_analyze", { characterId: id });
   revalidatePath("/personnages");
 }
 

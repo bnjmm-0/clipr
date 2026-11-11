@@ -14,6 +14,7 @@ import { snapshotUser } from "../lib/stats";
 import { featureEnabled, getCredential } from "../lib/settings";
 import { INSPIRATION_HOURS, analyzeInspiration, refreshInspiration } from "../lib/inspiration";
 import { genDir } from "../lib/storage";
+import { analyzeCharacter } from "../lib/character-import";
 
 const MAX_ATTEMPTS = 3;
 
@@ -38,6 +39,7 @@ async function handle(job: { id: string; type: string; payload: string; projectI
       if (c) await ensureCharacterRef(c, c.userId, p.engine, true, Number(p.variants) || 1);
       return;
     }
+    case "character_analyze": await analyzeCharacter(p.characterId); return;
     case "trends": await refreshTrends(); return;
     case "inspiration": await refreshInspiration(); return;
     case "inspiration_analyze": await analyzeInspiration(p.videoId, p.userId); return;

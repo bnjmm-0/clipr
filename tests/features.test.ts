@@ -39,3 +39,13 @@ test("YouTube : titre et description de Short, visibilité", async () => {
   assert.ok(d <= now && now.getTime() - d.getTime() < 864e5);
   assert.equal(d.toLocaleString("en-US", { timeZone: "America/Los_Angeles", hour: "numeric", hourCycle: "h23" }), "00");
 });
+
+test("personnage importé : son image est sa fiche, description courte", async () => {
+  const { importedRef, isImported, LOOK_MAX } = await import("../lib/character-import");
+  const ref = importedRef("abc");
+  assert.ok(ref.endsWith("abc_import.png"));
+  assert.equal(isImported({ id: "abc", refImagePath: ref }), true);
+  assert.equal(isImported({ id: "abc", refImagePath: ref.replace("_import", "") }), false);
+  assert.equal(isImported({ id: "abc", refImagePath: null }), false);
+  assert.ok(LOOK_MAX <= 300);
+});
