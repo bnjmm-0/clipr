@@ -6,7 +6,7 @@ import { createCharacter } from "@/app/actions";
 // Créateur de personnages : choix en un clic, description assemblée et visible en direct,
 // puis createCharacter (fiche de référence, ou 3 variantes au choix, générée en arrière-plan).
 // `voices` : options de la liste « Voix » (VoiceOptions, rendues côté serveur).
-export default function CharacterBuilder({ voices }: { voices: React.ReactNode }) {
+export default function CharacterBuilder({ voices, defaultVoice = "alloy" }: { voices: React.ReactNode; defaultVoice?: string }) {
   const start: BuilderState = { fruit: "fraise", gender: "fille", age: "adulte", body: BUILDER.body[0], eyes: BUILDER.eyes[0], mood: "souriant", accessories: [], outfit: "", texture: BUILDER.textures[0][0], details: "", personality: [] };
   const [s, setS] = useState<BuilderState>(start);
   const [other, setOther] = useState("");
@@ -57,7 +57,7 @@ export default function CharacterBuilder({ voices }: { voices: React.ReactNode }
       <input value={extra} onChange={(e) => setExtra(e.target.value)} maxLength={120} placeholder="Autre trait : ex. parle toujours de son ex" style={{ marginTop: 8 }} />
 
       <div className="grid builder2">
-        <div><label>Voix</label><select name="voice" defaultValue="alloy">{voices}</select></div>
+        <div><label>Voix</label><select name="voice" defaultValue={defaultVoice}>{voices}</select></div>
         <div><label>Fiche de référence</label><select name="variants" value={variants} onChange={(e) => setVariants(e.target.value)}>
           <option value="3">3 propositions au choix (≈ 0,19 $)</option><option value="1">1 seule (≈ 0,06 $)</option></select></div>
       </div>

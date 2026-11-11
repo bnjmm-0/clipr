@@ -25,6 +25,18 @@ export const DEFAULT_PRICES: Record<string, { price: number; per: string }> = {
   "openai:tts-1": { price: 0.015 * 1.5, per: "minute" },
   "replicate:image": { price: 0.03, per: "image" },
   "replicate:video": { price: 0.5, per: "vidéo" },
+  // Google Gemini (tarifs publics AI Studio, novembre 2026)
+  "google:gemini-3.8-flash:in": { price: 0.75, per: "1M tokens" },
+  "google:gemini-3.8-flash:out": { price: 3.75, per: "1M tokens" },
+  "google:gemini-3.5-flash-lite:in": { price: 0.3, per: "1M tokens" },
+  "google:gemini-3.5-flash-lite:out": { price: 2.5, per: "1M tokens" },
+  "google:gemini-3.1-pro-preview:in": { price: 2, per: "1M tokens" },
+  "google:gemini-3.1-pro-preview:out": { price: 12, per: "1M tokens" },
+  "google:gemini-nano-banana-2.1": { price: 0.0336, per: "image" },
+  "google:gemini-3.1-flash-image": { price: 0.067, per: "image" },
+  "google:gemini-3-pro-image": { price: 0.134, per: "image" },
+  "google:gemini-3.8-flash-tts": { price: 9, per: "1M tokens audio" },
+  "google:gemini-omni-1.2-flash": { price: 0.07, per: "seconde" },
 };
 
 export function priceOf(key: string, overrides: Record<string, number> = {}) {

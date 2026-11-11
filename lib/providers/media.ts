@@ -5,12 +5,16 @@ import { getSettings, requireCredential } from "../settings";
 import { priceOf, recordUsage } from "../usage";
 import { apiError } from "./errors";
 import { TOOL_APPS, pickOptions } from "../ai-tools";
+import { GEMINI_IMAGE, GEMINI_VIDEO, imagePart, interact, saveOutput } from "./gemini";
 
-// Texte → image : OpenAI Images ou Replicate. `engine` (lib/engines.ts) impose l'IA de la vidéo, sinon Réglages.
+// Texte → image : OpenAI Images, Replicate ou Gemini (Nano Banana). `engine` (lib/engines.ts) impose l'IA de la vidéo, sinon Réglages.
 // `refs` : images de référence (fiches des personnages) qui verrouillent l'apparence ; GPT Image et FLUX.2 les acceptent.
 export async function generateImage(prompt: string, outFile: string, userId: string, engine?: string | null, refs: string[] = []) {
   const s = await getSettings();
   refs = refs.filter((f) => fs.existsSync(f));
+  if (engine === "gemini-image" || (s.imageProvider === "google" && engine !== "gpt-image" && engine !== "flux")) {
+    return geminiImage(prompt, outFile, userId, s.imageModel.startsWith("gemini") ? s.imageModel : GEMINI_IMAGE, refs);
+  }
   if (engine === "flux") {
     const input = replicateInput("flux", prompt, { aspect_ratio: "9:16" });
     if (refs.length) input.input_images = refs.map((f) => dataUri(f));
@@ -61,6 +65,7 @@ const START_IMAGE: Record<string, string> = { kling: "start_image", veo: "image"
 // Pour une scène de vidéo IA : format vertical, sans son (la voix off est posée ensuite), et si possible
 // à partir de l'image de la scène (`startImage`) : le prompt ne décrit alors que le mouvement.
 export async function generateVideo(prompt: string, outFile: string, userId: string, engine?: string | null, startImage?: string, seconds = 5) {
+  if (engine === "omni") return geminiVideo(prompt, outFile, userId, startImage, seconds);
   if (engine === "grok" || engine === "grokpro") return grokVideo(prompt, outFile, userId, engine === "grok" ? "grok-imagine-video-1.5-lite" : "grok-imagine-video-1.5", startImage, seconds);
   const s = await getSettings();
   const model = engine ? TOOL_APPS[engine]?.model : s.videoModel;
@@ -98,6 +103,34 @@ async function grokVideo(prompt: string, outFile: string, userId: string, model:
   if (st.status !== "done" || !st.video?.url) throw new Error(`Grok Imagine : ${st.status === "failed" ? "génération refusée ou échouée" : st.status ?? "délai dépassé"}`);
   await download(st.video.url, outFile);
   await recordUsage({ userId, provider: "xai", kind: "video", model, units: duration, unitLabel: "secondes", costUsd: duration * priceOf(`xai:${model}`, s.prices) });
+  return outFile;
+}
+
+// Nano Banana (Gemini) : les fiches des personnages sont jointes comme références (4 personnages au plus),
+// format vertical 9:16 en 1K (le moins cher). L'image reçue est convertie si son format ne suit pas le nom du fichier.
+async function geminiImage(prompt: string, outFile: string, userId: string, model: string, refs: string[]) {
+  const s = await getSettings();
+  const j = await interact({ model, input: [{ type: "text", text: prompt }, ...refs.slice(0, 4).map(imagePart)], response_format: { type: "image", aspect_ratio: "9:16", image_size: "1K" } });
+  fs.mkdirSync(path.dirname(outFile), { recursive: true });
+  const tmp = `${outFile}.gemini`;
+  const mime = await saveOutput(j, "image", tmp);
+  const ext = path.extname(outFile).slice(1).toLowerCase().replace("jpg", "jpeg");
+  if (mime.endsWith(`/${ext}`)) fs.renameSync(tmp, outFile);
+  else { execFileSync("ffmpeg", ["-v", "error", "-y", "-i", tmp, "-frames:v", "1", outFile]); fs.rmSync(tmp, { force: true }); }
+  await recordUsage({ userId, provider: "google", kind: "image", model, units: 1, unitLabel: "image", costUsd: priceOf(`google:${model}`, s.prices) || 0.0336, meta: { refs: refs.length } });
+  return outFile;
+}
+
+// Gemini Omni Flash : plan vidéo vertical de 3 à 15 s, à partir de l'image de la scène si elle existe.
+// Omni ajoute toujours un son ; le montage le retire (-an) pour poser la voix off.
+async function geminiVideo(prompt: string, outFile: string, userId: string, startImage?: string, seconds = 5) {
+  const s = await getSettings();
+  const duration = Math.max(3, Math.min(15, Math.ceil(seconds)));
+  const input = [...(startImage && fs.existsSync(startImage) ? [imagePart(startImage)] : []), { type: "text", text: prompt }];
+  const j = await interact({ model: GEMINI_VIDEO, input, response_format: { type: "video", aspect_ratio: "9:16", duration: `${duration}s`, resolution: "720p" } });
+  fs.mkdirSync(path.dirname(outFile), { recursive: true });
+  await saveOutput(j, "video", outFile);
+  await recordUsage({ userId, provider: "google", kind: "video", model: GEMINI_VIDEO, units: duration, unitLabel: "secondes", costUsd: duration * priceOf(`google:${GEMINI_VIDEO}`, s.prices) });
   return outFile;
 }
 

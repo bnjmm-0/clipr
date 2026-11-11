@@ -5,7 +5,7 @@ import { importCharacter } from "@/app/actions";
 // Import d'un personnage fait ailleurs : l'image est réduite dans le navigateur (1024 px, JPEG)
 // avant l'envoi, puis importCharacter en fait la fiche de référence et lance son analyse.
 // `voices` : options de la liste « Voix » (VoiceOptions, rendues côté serveur).
-export default function CharacterImport({ voices }: { voices: React.ReactNode }) {
+export default function CharacterImport({ voices, defaultVoice = "alloy" }: { voices: React.ReactNode; defaultVoice?: string }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [blob, setBlob] = useState<Blob | null>(null);
@@ -58,7 +58,7 @@ export default function CharacterImport({ voices }: { voices: React.ReactNode })
       <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => pick(e.target.files?.[0])} />
       <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: "0 12px", marginTop: 12 }}>
         <div><label>Nom <span className="xs muted">(facultatif)</span></label><input name="name" maxLength={60} placeholder="Sinon, l'IA en propose un" /></div>
-        <div><label>Voix</label><select name="voice" defaultValue="alloy">{voices}</select></div>
+        <div><label>Voix</label><select name="voice" defaultValue={defaultVoice}>{voices}</select></div>
       </div>
       <label>Personnalité <span className="xs muted">(facultatif)</span></label>
       <input name="personality" maxLength={600} placeholder="Ex. jalouse, dramatique. Sinon, l'IA la devine" />

@@ -49,3 +49,17 @@ test("personnage importé : son image est sa fiche, description courte", async (
   assert.equal(isImported({ id: "abc", refImagePath: null }), false);
   assert.ok(LOOK_MAX <= 300);
 });
+
+test("Gemini : moteurs, modèle du script et voix", async () => {
+  const { scriptModel, defaultScriptEngine, defaultImageEngine, isGeminiVoice, GEMINI_VOICES } = await import("../lib/engines");
+  const openai = { llmProvider: "openai", llmModel: "gpt-4o-mini" };
+  assert.deepEqual(scriptModel("gemini", openai), { provider: "google", model: "gemini-3.8-flash" });
+  assert.deepEqual(scriptModel(null, { llmProvider: "google", llmModel: "gemini-3.5-flash-lite" }), { provider: "google", model: "gemini-3.5-flash-lite" });
+  assert.deepEqual(scriptModel("gpt", openai), { provider: "openai", model: "gpt-4o-mini" });
+  assert.equal(defaultScriptEngine({ llmProvider: "google", llmModel: "" }), "gemini");
+  assert.equal(defaultImageEngine({ imageProvider: "google" }), "gemini-image");
+  assert.equal(GEMINI_VOICES.length, 30);
+  assert.equal(isGeminiVoice("gemini:Kore"), true);
+  assert.equal(isGeminiVoice("gemini:Inconnue"), false);
+  assert.equal(isGeminiVoice("alloy"), false);
+});

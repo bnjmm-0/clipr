@@ -2,10 +2,11 @@ import fs from "node:fs";
 import { getSettings, requireCredential } from "../settings";
 import { priceOf, recordUsage } from "../usage";
 import { apiError } from "./errors";
+import { GEMINI_TEXT, interact, outputText } from "./gemini";
 
 export type ChatOpts = {
   system: string; user: string; json?: boolean; maxTokens?: number; userId?: string | null; purpose?: string;
-  provider?: "openai" | "anthropic"; model?: string; // par défaut : ceux de Réglages
+  provider?: "openai" | "anthropic" | "google"; model?: string; // par défaut : ceux de Réglages
   images?: string[]; // images JPEG jointes au message (analyse visuelle : GPT-4o, Claude)
 };
 
@@ -15,7 +16,18 @@ export async function chat(o: ChatOpts): Promise<string> {
   const provider = o.provider ?? s.llmProvider;
   const model = o.model ?? s.llmModel;
   let text = "", tin = 0, tout = 0;
-  if (provider === "anthropic") {
+  if (provider === "google") {
+    // Un modèle d'un autre fournisseur resté dans Réglages est remplacé par le Gemini courant.
+    if (!model.startsWith("gemini")) return chat({ ...o, provider: "google", model: GEMINI_TEXT });
+    const j = await interact({
+      model, system_instruction: o.system + (o.json ? "\nRéponds uniquement avec du JSON valide, sans texte autour." : ""),
+      input: [{ type: "text", text: o.user }, ...(o.images ?? []).map((f) => ({ type: "image", mime_type: "image/jpeg", data: fs.readFileSync(f).toString("base64") }))],
+      generation_config: { max_output_tokens: o.maxTokens ?? 2000 },
+      ...(o.json ? { response_format: { type: "text", mime_type: "application/json" } } : {}),
+    });
+    text = outputText(j);
+    tin = j.usage?.total_input_tokens ?? 0; tout = j.usage?.total_output_tokens ?? 0;
+  } else if (provider === "anthropic") {
     const key = await requireCredential("anthropic");
     const r = await fetch(`${process.env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com/v1"}/messages`, {
       method: "POST",

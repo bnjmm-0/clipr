@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { CREDENTIALS, FEATURES, credentialStatus, getSettings } from "@/lib/settings";
 import { DEFAULT_PRICES } from "@/lib/usage";
 import CredentialRow from "@/components/CredentialRow";
-import { grantMinutes, saveFeatures, saveProviders } from "@/app/actions";
+import { grantMinutes, saveFeatures, saveProviders, switchToGemini } from "@/app/actions";
 
 export default async function Settings() {
   await requireAdmin();
@@ -27,14 +27,22 @@ export default async function Settings() {
             <button className="btn sm" style={{ marginTop: 16 }}>Enregistrer</button>
           </form>
 
+          <form action={switchToGemini} className="panel">
+            <h2>Tout en Gemini</h2>
+            <p className="xs muted" style={{ marginTop: 4 }}>Une seule clé Google pour les scripts, l'analyse des images, les images des scènes (Nano Banana 2.1, ≈ 0,034 $ l'image) et les voix off des nouveaux personnages (30 voix Gemini qui parlent français). Pour des scènes animées, choisis « Gemini Omni Flash » dans les visuels d'une vidéo (≈ 0,07 $ la seconde). Le montage et les sous-titres restent faits sur ton serveur, gratuitement.</p>
+            {s.llmProvider === "google" && s.imageProvider === "google"
+              ? <p className="xs" style={{ marginTop: 10, color: "var(--accent)" }}>Gemini est déjà utilisé partout.</p>
+              : <button className="btn accent sm" style={{ marginTop: 12 }} disabled={!creds.google}>{creds.google ? "Tout passer en Gemini" : "Ajoute d'abord la clé Google Gemini dans « Clés API »"}</button>}
+          </form>
+
           <form action={saveProviders} className="panel">
             <h2>Fournisseurs et modèles</h2>
             <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: "0 12px" }}>
-              <div><label>LLM (scoring, scripts, Coach)</label><select name="llmProvider" defaultValue={s.llmProvider}><option value="openai">OpenAI</option><option value="anthropic">Anthropic</option></select></div>
+              <div><label>LLM (scoring, scripts, Coach)</label><select name="llmProvider" defaultValue={s.llmProvider}><option value="openai">OpenAI</option><option value="anthropic">Anthropic</option><option value="google">Google Gemini</option></select></div>
               <div><label>Modèle LLM</label><input name="llmModel" defaultValue={s.llmModel} /></div>
               <div><label>Transcription</label><select name="sttProvider" defaultValue={s.sttProvider}><option value="openai">OpenAI Whisper</option><option value="groq">Groq Whisper</option></select></div>
               <div><label>Voix off (OpenAI)</label><input name="ttsModel" defaultValue={s.ttsModel} /></div>
-              <div><label>Images</label><select name="imageProvider" defaultValue={s.imageProvider}><option value="openai">OpenAI</option><option value="replicate">Replicate</option></select></div>
+              <div><label>Images</label><select name="imageProvider" defaultValue={s.imageProvider}><option value="openai">OpenAI</option><option value="replicate">Replicate</option><option value="google">Google Gemini (Nano Banana)</option></select></div>
               <div><label>Modèle image</label><input name="imageModel" defaultValue={s.imageModel} /></div>
               <div><label>Qualité des images (GPT Image)</label><select name="imageQuality" defaultValue={s.imageQuality}><option value="medium">Moyenne · ≈ 0,06 $ l'image (conseillé)</option><option value="high">Haute · ≈ 0,25 $ l'image</option><option value="low">Basse · ≈ 0,02 $ l'image (brouillons)</option></select></div>
               <div><label>Modèle vidéo (Replicate)</label><input name="videoModel" defaultValue={s.videoModel} placeholder="minimax/video-01" /></div>

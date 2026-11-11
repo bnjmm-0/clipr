@@ -3,13 +3,13 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
-import { isElevenVoice } from "@/lib/engines";
+import { GEMINI_PREFIX, isElevenVoice, isGeminiVoice } from "@/lib/engines";
 import Poller from "@/components/Poller";
 import AiCardFx from "@/components/AiCardFx";
 import CharacterBuilder from "@/components/CharacterBuilder";
 import CharacterImport from "@/components/CharacterImport";
 import { isImported } from "@/lib/character-import";
-import { VoiceOptions } from "@/components/EngineFields";
+import { VoiceOptions, defaultVoice } from "@/components/EngineFields";
 import { chooseCharacterVariant, deleteCharacter, reanalyzeCharacter, remakeCharacterRef } from "@/app/actions";
 
 // Créateur de personnages et galerie : les personnages créés ici se cochent dans les formulaires de vidéo IA.
@@ -49,8 +49,8 @@ export default async function Characters() {
 
       <div className="grid charlayout">
         <div className="stack-16">
-          <CharacterBuilder voices={<VoiceOptions />} />
-          <CharacterImport voices={<VoiceOptions />} />
+          <CharacterBuilder voices={<VoiceOptions />} defaultVoice={defaultVoice(s)} />
+          <CharacterImport voices={<VoiceOptions />} defaultVoice={defaultVoice(s)} />
         </div>
         <div className="stack-16">
           <h2>Mes personnages <span className="xs muted num">{characters.length}</span></h2>
@@ -63,7 +63,7 @@ export default async function Characters() {
                   {v.ref ? <img src={`/api/files?char=${c.id}&v=${mtime(v.ref)}`} alt={`Fiche de ${c.name}`} className="charbig" />
                     : <span className={`charbig ${v.error ? "err" : "wait"}`}>{v.error ? "Fiche impossible" : "Fiche en cours…"}</span>}
                   <div style={{ minWidth: 0, flex: 1 }}>
-                    <div className="row"><h3 style={{ flex: 1 }}>{c.name || "Nouveau personnage"}</h3>{v.imported && <span className="xs muted" style={{ marginRight: 8 }}>importé</span>}<span className="xs muted">voix {isElevenVoice(c.voice) ? "ElevenLabs" : c.voice}</span></div>
+                    <div className="row"><h3 style={{ flex: 1 }}>{c.name || "Nouveau personnage"}</h3>{v.imported && <span className="xs muted" style={{ marginRight: 8 }}>importé</span>}<span className="xs muted">voix {isElevenVoice(c.voice) ? "ElevenLabs" : isGeminiVoice(c.voice) ? `Gemini ${c.voice.slice(GEMINI_PREFIX.length)}` : c.voice}</span></div>
                     {c.personality && <p className="xs" style={{ color: "var(--accent)", marginTop: 4 }}>{c.personality}</p>}
                     <p className="xs sec charlook" style={{ marginTop: 6 }}>{v.analyzing ? "Analyse de l'image en cours…" : c.look}</p>
                     {v.error && <p className="xs" style={{ color: "var(--err)", marginTop: 6 }}>{v.error.slice(0, 160)}</p>}

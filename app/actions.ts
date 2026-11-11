@@ -10,8 +10,8 @@ import { chat } from "@/lib/providers/llm";
 import { accountSnapshot } from "@/lib/providers/tiktok";
 import { CREATORS } from "@/lib/ai-advice";
 import { TOOL_APPS, pickOptions } from "@/lib/ai-tools";
-import { IMAGE_ENGINES, SCRIPT_ENGINES, isElevenVoice, parseVisuals, pickEngine } from "@/lib/engines";
-import { VOICES } from "@/lib/providers/tts";
+import { GEMINI_PREFIX, GEMINI_VOICES, IMAGE_ENGINES, SCRIPT_ENGINES, isElevenVoice, parseVisuals, pickEngine } from "@/lib/engines";
+import { VOICES, isKnownVoice } from "@/lib/providers/tts";
 import { COACH_RULES } from "@/lib/prompting";
 import { readStoryOptions } from "@/lib/story-options";
 import { IMPORT_MAX_BYTES, IMPORT_TYPES, saveCharacterImage } from "@/lib/character-import";
@@ -65,6 +65,16 @@ export async function saveProviders(fd: FormData) {
     },
   });
   revalidatePath("/reglages");
+}
+
+// « Tout en Gemini » : scripts, analyse d'images et images passent par Google ; les nouveaux personnages
+// reçoivent une voix Gemini (voir defaultVoice). Les vidéos animées se choisissent dans chaque vidéo (Gemini Omni).
+export async function switchToGemini() {
+  await requireAdmin();
+  await prisma.appSettings.update({ where: { id: "global" }, data: { llmProvider: "google", llmModel: "gemini-3.8-flash", imageProvider: "google", imageModel: "gemini-nano-banana-2.1" } });
+  revalidatePath("/reglages");
+  revalidatePath("/personnages");
+  revalidatePath("/videos-ia");
 }
 
 export async function saveCredential(_: FormState, fd: FormData): Promise<FormState> {
@@ -226,7 +236,7 @@ export async function createCharacter(fd: FormData) {
   const look = String(fd.get("look") || "").trim().slice(0, 1200);
   if (!name || !look) return;
   const voice = String(fd.get("voice") || "alloy");
-  const c = await prisma.character.create({ data: { userId: u.id, name, look, personality: String(fd.get("personality") || "").slice(0, 600), voice: isElevenVoice(voice) || VOICES.includes(voice) ? voice : "alloy", visualStyle: String(fd.get("visualStyle") || "cinématique réaliste").slice(0, 120) } });
+  const c = await prisma.character.create({ data: { userId: u.id, name, look, personality: String(fd.get("personality") || "").slice(0, 600), voice: isKnownVoice(voice) ? voice : "alloy", visualStyle: String(fd.get("visualStyle") || "cinématique réaliste").slice(0, 120) } });
   // Fiche de référence en arrière-plan : 3 propositions au choix depuis le créateur de personnages.
   await enqueue("character_ref", { characterId: c.id, variants: fd.get("variants") === "3" ? 3 : 1 });
   revalidatePath("/videos-ia");
@@ -243,7 +253,7 @@ export async function importCharacter(fd: FormData): Promise<{ error?: string }>
   if (!IMPORT_TYPES.includes(file.type)) return { error: "Format non pris en charge : utilise une image PNG, JPEG ou WebP." };
   if (file.size > IMPORT_MAX_BYTES) return { error: "Image trop lourde (2 Mo maximum)." };
   const voice = String(fd.get("voice") || "alloy");
-  const c = await prisma.character.create({ data: { userId: u.id, name: String(fd.get("name") || "").trim().slice(0, 60), look: "", personality: String(fd.get("personality") || "").trim().slice(0, 600), voice: isElevenVoice(voice) || VOICES.includes(voice) ? voice : "alloy" } });
+  const c = await prisma.character.create({ data: { userId: u.id, name: String(fd.get("name") || "").trim().slice(0, 60), look: "", personality: String(fd.get("personality") || "").trim().slice(0, 600), voice: isKnownVoice(voice) ? voice : "alloy" } });
   try {
     await prisma.character.update({ where: { id: c.id }, data: { refImagePath: await saveCharacterImage(c.id, file) } });
   } catch {
@@ -302,7 +312,7 @@ function readEngines(fd: FormData) {
   const voice = String(fd.get("voice") || "").slice(0, 80);
   return {
     visualMode, engineVideo, engineScript: pickEngine(SCRIPT_ENGINES, fd.get("engineScript")), engineImage: pickEngine(IMAGE_ENGINES, fd.get("engineImage")),
-    voice: isElevenVoice(voice) || VOICES.includes(voice) ? voice : null,
+    voice: isKnownVoice(voice) ? voice : null,
   };
 }
 type Engines = ReturnType<typeof readEngines>;
@@ -432,10 +442,12 @@ export async function remakeFromInspiration(id: string) {
   if (!v?.analysisJson) return;
   const r = (JSON.parse(v.analysisJson) as import("@/lib/inspiration").Analysis).recette;
   const cast: string[] = [];
+  // Voix différentes pour chaque personnage, chez le fournisseur choisi dans Réglages.
+  const pool = (await getSettings()).llmProvider === "google" ? GEMINI_VOICES.map(([n]) => `${GEMINI_PREFIX}${n}`) : VOICES;
   for (const c of r.characters) {
     let ch = await prisma.character.findFirst({ where: { userId: u.id, name: c.name } });
     if (!ch) {
-      ch = await prisma.character.create({ data: { userId: u.id, name: c.name, look: c.look, personality: c.personality, voice: VOICES[cast.length % VOICES.length], visualStyle: "3D hyperréaliste façon film d'animation" } });
+      ch = await prisma.character.create({ data: { userId: u.id, name: c.name, look: c.look, personality: c.personality, voice: pool[cast.length % pool.length], visualStyle: "3D hyperréaliste façon film d'animation" } });
       await enqueue("character_ref", { characterId: ch.id });
     }
     cast.push(ch.id);

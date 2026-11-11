@@ -1,4 +1,4 @@
-// Faux serveur d'IA pour tester Clipr sans clé ni coût : imite OpenAI, Anthropic, Groq, ElevenLabs, Replicate et xAI.
+// Faux serveur d'IA pour tester Clipr sans clé ni coût : imite OpenAI, Anthropic, Groq, ElevenLabs, Replicate, xAI et Gemini.
 // Lancer `npm run mock:ai` puis, dans un autre terminal, `npm run worker:mock` (worker branché sur ce serveur).
 // Les réponses sont fabriquées avec FFmpeg (sons, dégradés, mires) ; les appels reçus s'affichent dans la console.
 import http from "node:http";
@@ -54,9 +54,27 @@ http.createServer(async (req, res) => {
   const buf = await body(req);
   const url = req.url.replace(/^\/v1/, "");
   if (url.startsWith("/files/")) { res.writeHead(200); return res.end(fs.readFileSync(path.join(dir, path.basename(url)))); }
-  const who = req.headers["x-api-key"] ? "anthropic" : req.headers["xi-api-key"] ? "elevenlabs" : url.startsWith("/models/") ? "replicate" : url.startsWith("/videos") ? "xai" : "openai";
+  const who = req.headers["x-goog-api-key"] ? "google" : req.headers["x-api-key"] ? "anthropic" : req.headers["xi-api-key"] ? "elevenlabs" : url.startsWith("/models/") ? "replicate" : url.startsWith("/videos") ? "xai" : "openai";
   log(who, req.method, url);
-  if (!(req.headers.authorization ?? req.headers["x-api-key"] ?? req.headers["xi-api-key"])) return json(res, { error: { message: "no key" } }, 401);
+  if (!(req.headers.authorization ?? req.headers["x-api-key"] ?? req.headers["xi-api-key"] ?? req.headers["x-goog-api-key"])) return json(res, { error: { message: "no key" } }, 401);
+  // Gemini (Interactions API) : texte, image, voix ou vidéo selon le modèle et response_format.
+  if (url === "/interactions") {
+    const b = JSON.parse(buf.toString()), kind = b.response_format?.type;
+    const parts = (Array.isArray(b.input) ? b.input : [{ type: "text", text: String(b.input) }]).flatMap((p) => (p.type === "user_input" ? p.content : [p]));
+    const text = parts.filter((p) => p.type === "text").map((p) => p.text).join("\n"), images = parts.filter((p) => p.type === "image").length;
+    log("  gemini", b.model, kind ?? "texte", images ? `images jointes : ${images}` : "", b.generation_config?.speech_config ? `voix ${JSON.stringify(b.generation_config.speech_config)}` : "", b.response_format?.duration ?? "");
+    const out = (block, usage = { total_input_tokens: 700, total_output_tokens: 250 }) => json(res, { id: `int_${++n}`, status: "completed", steps: [{ type: "user_input", content: parts }, { type: "model_output", content: [block] }], usage });
+    if (b.model.includes("tts")) {
+      const f = path.join(dir, `tts_${++n}.wav`); ff("-f", "lavfi", "-i", `sine=frequency=440:duration=${Math.max(1.5, text.split(/\s+/).length / 2.6).toFixed(2)}`, "-ar", "24000", "-ac", "1", f);
+      return out({ type: "audio", mime_type: "audio/wav", data: fs.readFileSync(f).toString("base64") }, { total_input_tokens: 20, total_output_tokens: 160 });
+    }
+    if (kind === "image") return out({ type: "image", mime_type: "image/png", data: picture(`gradients=s=768x1344:c0=0x0b3d2e:c1=0x34d399:seed=${n}`).toString("base64") });
+    if (kind === "video") {
+      const f = path.join(dir, `omni_${++n}.mp4`); ff("-f", "lavfi", "-i", `testsrc2=s=720x1280:r=24:d=${parseInt(b.response_format.duration) || 10}`, "-f", "lavfi", "-i", "sine=frequency=300", "-shortest", "-pix_fmt", "yuv420p", f);
+      return out({ type: "video", mime_type: "video/mp4", data: fs.readFileSync(f).toString("base64") });
+    }
+    return out({ type: "text", text: answer(text, b.response_format?.mime_type === "application/json") });
+  }
   if (url === "/chat/completions") {
     const b = JSON.parse(buf.toString()), c = b.messages.at(-1).content;
     // Message avec images jointes : le texte est dans une des parties.

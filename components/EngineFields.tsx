@@ -1,5 +1,5 @@
 import { credentialStatus, getSettings } from "@/lib/settings";
-import { ELEVEN_PREFIX, IMAGE_ENGINES, SCRIPT_ENGINES, VIDEO_ENGINES, defaultImageEngine, defaultScriptEngine } from "@/lib/engines";
+import { ELEVEN_PREFIX, GEMINI_PREFIX, GEMINI_VOICES, IMAGE_ENGINES, SCRIPT_ENGINES, VIDEO_ENGINES, defaultImageEngine, defaultScriptEngine } from "@/lib/engines";
 import { VOICES } from "@/lib/providers/tts";
 import { listElevenVoices, type ElevenVoice } from "@/lib/providers/tools";
 
@@ -18,7 +18,10 @@ async function elevenVoices(hasKey: boolean) {
   return eleven.voices;
 }
 
-// Options d'une liste « Voix off » : voix OpenAI et voix du compte ElevenLabs ("elevenlabs:<id>").
+// Voix proposée par défaut aux nouveaux personnages : une voix Gemini quand Gemini écrit les scripts.
+export const defaultVoice = (s: { llmProvider: string }) => (s.llmProvider === "google" ? `${GEMINI_PREFIX}Kore` : "alloy");
+
+// Options d'une liste « Voix off » : voix OpenAI, voix Gemini ("gemini:<nom>") et voix du compte ElevenLabs ("elevenlabs:<id>").
 export async function VoiceOptions({ withDefault = false }: { withDefault?: boolean }) {
   const creds = await credentialStatus();
   const voices = await elevenVoices(!!creds.elevenlabs);
@@ -26,6 +29,7 @@ export async function VoiceOptions({ withDefault = false }: { withDefault?: bool
     <>
       {withDefault && <option value="">Voix du personnage</option>}
       <optgroup label="OpenAI">{VOICES.map((v) => <option key={v} value={v} disabled={!creds.openai}>{v}</option>)}</optgroup>
+      <optgroup label={`Gemini${creds.google ? "" : " · clé à ajouter dans Réglages"}`}>{GEMINI_VOICES.map(([n, d]) => <option key={n} value={`${GEMINI_PREFIX}${n}`} disabled={!creds.google}>{n} · {d}</option>)}</optgroup>
       {voices.length > 0
         ? <optgroup label="ElevenLabs">{voices.map((v) => <option key={v.id} value={`${ELEVEN_PREFIX}${v.id}`}>{v.name}</option>)}</optgroup>
         : <option disabled>ElevenLabs · {creds.elevenlabs ? "aucune voix trouvée (vérifie la clé)" : "clé à ajouter dans Réglages"}</option>}
