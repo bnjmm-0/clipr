@@ -13,7 +13,7 @@ export const GEMINI_TTS = "gemini-3.8-flash-tts";
 export const GEMINI_VIDEO = "gemini-omni-1.2-flash";
 
 type Block = { type?: string; text?: string; data?: string; uri?: string; mime_type?: string };
-export type Interaction = { status?: string; steps?: { type?: string; content?: Block[] }[]; outputs?: Block[]; usage?: { total_input_tokens?: number; total_output_tokens?: number } };
+export type Interaction = { status?: string; steps?: { type?: string; content?: Block[] }[]; outputs?: Block[]; usage?: { total_input_tokens?: number; total_output_tokens?: number; total_thought_tokens?: number } };
 
 // Modèles de secours quand un modèle de texte est saturé chez Google (« high demand »).
 const FALLBACK: Record<string, string[]> = { "gemini-3.8-flash": ["gemini-3.6-flash", "gemini-3.5-flash-lite"], "gemini-3.6-flash": ["gemini-3.5-flash-lite"] };
@@ -40,7 +40,8 @@ async function once(body: Record<string, unknown>, key: string): Promise<Interac
   if (r.status === 429) throw new Busy("Gemini limite le nombre de demandes : attends une minute (ou active la facturation sur AI Studio), puis relance.");
   if (r.status >= 500 || /high demand|overloaded|UNAVAILABLE/i.test(raw)) throw new Busy("Gemini est saturé en ce moment chez Google : relance dans quelques minutes.");
   if (!r.ok) throw apiError("Gemini", r.status, j);
-  if (j.status && j.status !== "completed") throw new Error(`Gemini : génération ${j.status === "failed" ? "refusée ou échouée" : j.status}`);
+  // « incomplete » : réponse coupée à la longueur maximale ; le texte reçu reste utilisable.
+  if (j.status && j.status !== "completed" && j.status !== "incomplete") throw new Error(`Gemini : génération ${j.status === "failed" ? "refusée ou échouée" : j.status}`);
   return j;
 }
 

@@ -22,11 +22,13 @@ export async function chat(o: ChatOpts): Promise<string> {
     const j = await interact({
       model, system_instruction: o.system + (o.json ? "\nRéponds uniquement avec du JSON valide, sans texte autour." : ""),
       input: [{ type: "text", text: o.user }, ...(o.images ?? []).map((f) => ({ type: "image", mime_type: "image/jpeg", data: fs.readFileSync(f).toString("base64") }))],
-      generation_config: { max_output_tokens: o.maxTokens ?? 2000 },
+      // Réflexion « low » : Gemini réfléchit moins avant de répondre (plus rapide, moins de tokens facturés).
+      generation_config: { max_output_tokens: o.maxTokens ?? 2000, thinking_level: "low" },
       ...(o.json ? { response_format: { type: "text", mime_type: "application/json" } } : {}),
     });
     text = outputText(j);
-    tin = j.usage?.total_input_tokens ?? 0; tout = j.usage?.total_output_tokens ?? 0;
+    // Les tokens de réflexion sont facturés comme des tokens de sortie.
+    tin = j.usage?.total_input_tokens ?? 0; tout = (j.usage?.total_output_tokens ?? 0) + (j.usage?.total_thought_tokens ?? 0);
   } else if (provider === "anthropic") {
     const key = await requireCredential("anthropic");
     const r = await fetch(`${process.env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com/v1"}/messages`, {
