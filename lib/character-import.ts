@@ -14,6 +14,9 @@ export const LOOK_MAX = 300; // caractères : la description est envoyée avec c
 
 export const importedRef = (id: string) => path.join(STORAGE_DIR, "characters", `${id}_import.png`);
 export const isImported = (c: { id: string; refImagePath: string | null }) => c.refImagePath === importedRef(c.id);
+// Échantillon de voix d'un personnage (bouton « Écouter » de sa fiche) et la dernière erreur éventuelle.
+export const voiceSample = (id: string) => path.join(STORAGE_DIR, "characters", `${id}_voice.mp3`);
+export const voiceSampleError = (id: string) => `${voiceSample(id)}.erreur.txt`;
 
 // Enregistre l'image envoyée en PNG (format attendu par les modèles d'image comme référence), 1024 px max.
 export async function saveCharacterImage(id: string, file: Blob) {

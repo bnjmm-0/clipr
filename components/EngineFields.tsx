@@ -27,7 +27,7 @@ export async function VoiceOptions({ withDefault = false }: { withDefault?: bool
   const voices = await elevenVoices(!!creds.elevenlabs);
   return (
     <>
-      {withDefault && <option value="">Voix du personnage</option>}
+      {withDefault && <option value="">Voix de chaque personnage (conseillé)</option>}
       <optgroup label="OpenAI">{VOICES.map((v) => <option key={v} value={v} disabled={!creds.openai}>{v}</option>)}</optgroup>
       <optgroup label={`Gemini${creds.google ? "" : " · clé à ajouter dans Réglages"}`}>{GEMINI_VOICES.map(([n, d]) => <option key={n} value={`${GEMINI_PREFIX}${n}`} disabled={!creds.google}>{n} · {d}</option>)}</optgroup>
       {voices.length > 0

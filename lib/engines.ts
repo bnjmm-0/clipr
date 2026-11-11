@@ -55,6 +55,9 @@ export const GEMINI_VOICES: [string, string][] = [
 export const isGeminiVoice = (v?: string | null) => !!v?.startsWith(GEMINI_PREFIX) && GEMINI_VOICES.some(([n]) => n === v.slice(GEMINI_PREFIX.length));
 
 
+// Nom lisible d'une voix : « ElevenLabs », « Gemini Kore » ou « OpenAI alloy ».
+export const voiceLabel = (v?: string | null) => (!v ? "" : isElevenVoice(v) ? "ElevenLabs" : isGeminiVoice(v) ? `Gemini ${v.slice(GEMINI_PREFIX.length)}` : `OpenAI ${v}`);
+
 // Liste « Visuels » : "image", "video" (modèle de Réglages) ou "video:<moteur>".
 export function parseVisuals(v: unknown) {
   const [mode, engine] = String(v || "image").split(":");

@@ -3,14 +3,15 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
-import { GEMINI_PREFIX, isElevenVoice, isGeminiVoice } from "@/lib/engines";
+import { voiceLabel } from "@/lib/engines";
 import Poller from "@/components/Poller";
 import AiCardFx from "@/components/AiCardFx";
 import CharacterBuilder from "@/components/CharacterBuilder";
 import CharacterImport from "@/components/CharacterImport";
-import { isImported } from "@/lib/character-import";
+import { isImported, voiceSample, voiceSampleError } from "@/lib/character-import";
+import PendingButton from "@/components/PendingButton";
 import { VoiceOptions, defaultVoice } from "@/components/EngineFields";
-import { chooseCharacterVariant, deleteCharacter, reanalyzeCharacter, remakeCharacterRef } from "@/app/actions";
+import { chooseCharacterVariant, deleteCharacter, previewCharacterVoice, reanalyzeCharacter, remakeCharacterRef, setCharacterVoice } from "@/app/actions";
 
 // Créateur de personnages et galerie : les personnages créés ici se cochent dans les formulaires de vidéo IA.
 export default async function Characters() {
@@ -63,10 +64,20 @@ export default async function Characters() {
                   {v.ref ? <img src={`/api/files?char=${c.id}&v=${mtime(v.ref)}`} alt={`Fiche de ${c.name}`} className="charbig" />
                     : <span className={`charbig ${v.error ? "err" : "wait"}`}>{v.error ? "Fiche impossible" : "Fiche en cours…"}</span>}
                   <div style={{ minWidth: 0, flex: 1 }}>
-                    <div className="row"><h3 style={{ flex: 1 }}>{c.name || "Nouveau personnage"}</h3>{v.imported && <span className="xs muted" style={{ marginRight: 8 }}>importé</span>}<span className="xs muted">voix {isElevenVoice(c.voice) ? "ElevenLabs" : isGeminiVoice(c.voice) ? `Gemini ${c.voice.slice(GEMINI_PREFIX.length)}` : c.voice}</span></div>
+                    <div className="row"><h3 style={{ flex: 1 }}>{c.name || "Nouveau personnage"}</h3>{v.imported && <span className="xs muted" style={{ marginRight: 8 }}>importé</span>}<span className="xs muted">voix {voiceLabel(c.voice)}</span></div>
                     {c.personality && <p className="xs" style={{ color: "var(--accent)", marginTop: 4 }}>{c.personality}</p>}
                     <p className="xs sec charlook" style={{ marginTop: 6 }}>{v.analyzing ? "Analyse de l'image en cours…" : c.look}</p>
                     {v.error && <p className="xs" style={{ color: "var(--err)", marginTop: 6 }}>{v.error.slice(0, 160)}</p>}
+                    {/* Sa voix : elle parle avec dans toutes ses répliques (dialogues entre personnages). */}
+                    <form action={setCharacterVoice.bind(null, c.id)} className="row" style={{ gap: 6, marginTop: 10, flexWrap: "nowrap" }}>
+                      <select name="voice" defaultValue={c.voice} aria-label={`Voix de ${c.name}`} style={{ flex: 1, minWidth: 0 }}><VoiceOptions /></select>
+                      <PendingButton pending="…">Changer la voix</PendingButton>
+                    </form>
+                    <div className="row" style={{ gap: 6, marginTop: 6, flexWrap: "nowrap" }}>
+                      <form action={previewCharacterVoice.bind(null, c.id)}><PendingButton pending="Elle parle…">Écouter sa voix</PendingButton></form>
+                      {fs.existsSync(voiceSample(c.id)) && <audio controls preload="none" src={`/api/files?charvoice=${c.id}&v=${mtime(voiceSample(c.id))}`} style={{ height: 32, flex: 1, minWidth: 0 }} />}
+                    </div>
+                    {fs.existsSync(voiceSampleError(c.id)) && <p className="xs" style={{ color: "var(--err)", marginTop: 6 }}>{fs.readFileSync(voiceSampleError(c.id), "utf8")}</p>}
                     <div className="row" style={{ gap: 4, marginTop: 10, flexWrap: "wrap" }}>
                       <Link href={`/videos-ia?cast=${c.id}`} className="btn sm">Utiliser dans une vidéo</Link>
                       {v.imported

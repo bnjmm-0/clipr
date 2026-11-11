@@ -63,3 +63,15 @@ test("Gemini : moteurs, modèle du script et voix", async () => {
   assert.equal(isGeminiVoice("gemini:Inconnue"), false);
   assert.equal(isGeminiVoice("alloy"), false);
 });
+
+test("sous-titres : « Aucun sous-titre » garde l'accroche, « Aucun texte » n'affiche rien", async () => {
+  const { buildAss } = await import("../lib/pipeline/captions");
+  const words = [{ w: "Salut", s: 0, e: 0.4 }, { w: "toi", s: 0.4, e: 0.8 }];
+  const count = (ass: string, style: string) => (ass.match(new RegExp(`,${style},`, "g")) ?? []).length;
+  const bold = buildAss(words, "bold", { hook: "Accroche", duration: 2 });
+  assert.ok(count(bold, "Cap") > 0 && count(bold, "Hook") === 1);
+  const none = buildAss(words, "none", { hook: "Accroche", duration: 2 });
+  assert.equal(count(none, "Cap"), 0); assert.equal(count(none, "Hook"), 1);
+  const notext = buildAss(words, "notext", { hook: "Accroche", duration: 2 });
+  assert.equal(count(notext, "Cap"), 0); assert.equal(count(notext, "Hook"), 0);
+});

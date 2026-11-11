@@ -6,12 +6,12 @@ import Poller from "@/components/Poller";
 import DurationField from "@/components/DurationField";
 import EngineFields from "@/components/EngineFields";
 import StoryOptionsFields from "@/components/StoryOptionsFields";
-import { isElevenVoice } from "@/lib/engines";
+import { voiceLabel } from "@/lib/engines";
 import fs from "node:fs";
 import { createEpisode, createSeries, deleteCharacter, nextEpisode, remakeCharacterRef } from "@/app/actions";
 
 const STATUS: Record<string, [string, string]> = { ready: ["Prête", "ok"], failed: ["Échec", "err"], review: ["À valider", "live"] };
-const STYLE_OPTS = <><option value="bold">Pop</option><option value="bounce">Rebond</option><option value="box">Encadré</option><option value="typewriter">Machine à écrire</option></>;
+const STYLE_OPTS = <><option value="bold">Pop</option><option value="bounce">Rebond</option><option value="box">Encadré</option><option value="typewriter">Machine à écrire</option><option value="none">Aucun sous-titre (titre d'accroche gardé)</option><option value="notext">Aucun texte à l'écran</option></>;
 
 export default async function AiVideos({ searchParams }: { searchParams: Promise<{ idee?: string; format?: string; duree?: string; opts?: string; cast?: string; source?: string }> }) {
   const u = await requireUser();
@@ -38,7 +38,7 @@ export default async function AiVideos({ searchParams }: { searchParams: Promise
   const castPick = characters.length ? (
     <div style={{ gridColumn: "1 / -1" }}><label>Personnages (coche-en plusieurs pour qu'ils se parlent) · <Link href="/personnages" className="credlink">en créer un</Link></label>
       <div className="chips">{characters.map((c) => { const r = refOf(c); return (
-        <label key={c.id}><input type="checkbox" name="cast" value={c.id} defaultChecked={preCast.has(c.id)} /><span>{r.src && <img src={r.src} alt="" className="chipava" />}{c.name}</span></label>
+        <label key={c.id}><input type="checkbox" name="cast" value={c.id} defaultChecked={preCast.has(c.id)} /><span>{r.src && <img src={r.src} alt="" className="chipava" />}{c.name}<span className="xs muted" style={{ marginLeft: 6 }}>{voiceLabel(c.voice)}</span></span></label>
       ); })}</div></div>
   ) : <p className="xs muted" style={{ gridColumn: "1 / -1", marginTop: 12 }}>Crée tes personnages dans <Link href="/personnages" style={{ textDecoration: "underline" }}>Personnages</Link> : chacun reçoit une fiche de référence qui le garde identique d'une image à l'autre.</p>;
   const formatPick = <div><label>Format</label><select name="format" defaultValue={format === "narration" ? "narration" : "dialogue"}><option value="dialogue">Dialogue entre personnages</option><option value="narration">Narration (voix off)</option></select></div>;
@@ -88,6 +88,11 @@ export default async function AiVideos({ searchParams }: { searchParams: Promise
         <div className="stack-24">
           <div className="panel">
             <h2>Séries</h2>
+            <ol className="xs sec" style={{ margin: "8px 0 0", paddingLeft: 18, lineHeight: 1.7 }}>
+              <li>Dans <Link href="/personnages" className="credlink">Personnages</Link>, crée 2 à 4 fruits et donne à chacun sa voix (ElevenLabs, Gemini ou OpenAI) : « Écouter sa voix » pour vérifier.</li>
+              <li>« Nouvelle série » : un titre, un concept, coche tes personnages ; ils se parlent, chacun avec sa voix.</li>
+              <li>Ensuite, un clic sur « Créer l'épisode suivant » : Clipr se souvient des épisodes d'avant.</li>
+            </ol>
             {series.map((se) => (
               <form key={se.id} action={nextEpisode.bind(null, se.id)} className="raised" style={{ padding: 12, marginTop: 12 }}>
                 <div className="row"><h3 style={{ flex: 1 }}>{se.title}</h3><span className="xs muted num">{se._count.episodes} épisode{se._count.episodes > 1 ? "s" : ""}</span></div>
@@ -96,7 +101,7 @@ export default async function AiVideos({ searchParams }: { searchParams: Promise
                 <button className="btn ghost sm" style={{ marginTop: 8 }}>Créer l'épisode {se._count.episodes + 1}</button>
               </form>
             ))}
-            <details style={{ marginTop: 16 }}>
+            <details style={{ marginTop: 16 }} open={series.length === 0}>
               <summary style={{ cursor: "pointer" }} className="sec">Nouvelle série</summary>
               <form action={createSeries}>
                 <label>Titre</label><input name="title" required placeholder="Fruit Island" />
@@ -118,7 +123,7 @@ export default async function AiVideos({ searchParams }: { searchParams: Promise
               <div key={c.id} className="raised charcard">
                 {r.src ? <img src={r.src} alt={`Fiche de ${c.name}`} className="charref" /> : <span className={`charref ${r.error ? "err" : "wait"}`}>{r.error ? "Fiche impossible" : "Fiche en cours…"}</span>}
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <div className="row"><h3 style={{ flex: 1 }}>{c.name}</h3><span className="xs muted">voix {isElevenVoice(c.voice) ? "ElevenLabs" : c.voice}</span></div>
+                  <div className="row"><h3 style={{ flex: 1 }}>{c.name}</h3><span className="xs muted">voix {voiceLabel(c.voice)}</span></div>
                   <p className="xs sec" style={{ marginTop: 4 }}>{c.look}</p>
                   {r.error && <p className="xs" style={{ color: "var(--err)", marginTop: 4 }}>{r.error.slice(0, 160)}</p>}
                   <div className="row" style={{ gap: 4, marginTop: 6 }}>

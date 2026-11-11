@@ -23,6 +23,10 @@ export async function GET(req: Request) {
     const e = await prisma.episode.findFirst({ where: { id: q.get("episode")!, userId: u.id } });
     const { episodeDir } = await import("@/lib/pipeline/episode");
     if (e && /^\d{1,3}$/.test(q.get("scene")!)) file = `${episodeDir(e.id)}/img_${q.get("scene")}.png`;
+  } else if (q.get("charvoice")) {
+    // Échantillon de voix d'un personnage (bouton « Écouter »)
+    const c = await prisma.character.findFirst({ where: { id: q.get("charvoice")!, userId: u.id } });
+    if (c) { const { voiceSample } = await import("@/lib/character-import"); file = voiceSample(c.id); name = `${(c.name || "voix").replace(/[^\p{L}\p{N} _-]/gu, "")}.mp3`; }
   } else if (q.get("char")) {
     const c = await prisma.character.findFirst({ where: { id: q.get("char")!, userId: u.id } });
     // ?v=N&variant=1 : une des propositions du créateur ; sinon la fiche retenue.

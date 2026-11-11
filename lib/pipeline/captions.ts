@@ -10,6 +10,8 @@ export const CAPTION_STYLES = {
   typewriter: { label: "Machine à écrire (apparition mot à mot)", font: "DejaVu Sans", size: 76, primary: "&H00FFFFFF", active: "&H00FFD27A", outline: "&H00000000", bord: 4, shadow: 2, upper: false, maxWords: 5 },
 } as const;
 export type CaptionStyle = keyof typeof CAPTION_STYLES;
+// Sans sous-titres : « none » garde le titre d'accroche du début, « notext » n'affiche aucun texte.
+export const NO_CAPTIONS = ["none", "notext"];
 
 const W = 1080, H = 1920;
 
@@ -52,12 +54,12 @@ Style: Hook,${st.font},70,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,1,0,0,0,10
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 `;
   const lines: string[] = [];
-  if (opts.hook) {
+  if (opts.hook && styleKey !== "notext") {
     // Titre d'accroche : glisse depuis le haut, léger zoom, puis s'efface.
     const hook = esc(opts.hook).slice(0, 80);
     lines.push(`Dialogue: 2,${ts(0)},${ts(Math.min(3, opts.duration))},Hook,,0,0,0,,{\\an8\\move(${x},120,${x},220,0,280)\\fad(150,350)\\fscx85\\fscy85\\t(0,280,\\fscx100\\fscy100)\\3c&H0AD9F5&\\1c&H141415&}${hook}`);
   }
-  for (const g of groupWords(words, st.maxWords)) {
+  for (const g of NO_CAPTIONS.includes(styleKey) ? [] : groupWords(words, st.maxWords)) {
     const gEnd = g[g.length - 1].e + 0.15;
     g.forEach((w, i) => {
       const start = w.s;

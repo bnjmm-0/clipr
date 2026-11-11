@@ -1,4 +1,6 @@
 "use server";
+import fs from "node:fs";
+import path from "node:path";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -11,10 +13,10 @@ import { accountSnapshot } from "@/lib/providers/tiktok";
 import { CREATORS } from "@/lib/ai-advice";
 import { TOOL_APPS, pickOptions } from "@/lib/ai-tools";
 import { GEMINI_PREFIX, GEMINI_VOICES, IMAGE_ENGINES, SCRIPT_ENGINES, isElevenVoice, parseVisuals, pickEngine } from "@/lib/engines";
-import { VOICES, isKnownVoice } from "@/lib/providers/tts";
-import { COACH_RULES } from "@/lib/prompting";
+import { VOICES, isKnownVoice, speak } from "@/lib/providers/tts";
+import { COACH_RULES, voiceDirection } from "@/lib/prompting";
 import { readStoryOptions } from "@/lib/story-options";
-import { IMPORT_MAX_BYTES, IMPORT_TYPES, saveCharacterImage } from "@/lib/character-import";
+import { IMPORT_MAX_BYTES, IMPORT_TYPES, saveCharacterImage, voiceSample, voiceSampleError } from "@/lib/character-import";
 
 export type FormState = { error?: string; ok?: string } | undefined;
 
@@ -272,6 +274,30 @@ export async function reanalyzeCharacter(id: string) {
   const c = await prisma.character.findFirst({ where: { id, userId: u.id } });
   if (!c) return;
   await enqueue("character_analyze", { characterId: id });
+  revalidatePath("/personnages");
+}
+
+// Change la voix d'un personnage (OpenAI, Gemini ou ElevenLabs) ; l'ancien échantillon d'écoute est effacé.
+export async function setCharacterVoice(id: string, fd: FormData) {
+  const u = await requireUser();
+  const voice = String(fd.get("voice") || "");
+  if (!isKnownVoice(voice)) return;
+  await prisma.character.updateMany({ where: { id, userId: u.id }, data: { voice } });
+  for (const f of [voiceSample(id), voiceSampleError(id)]) fs.rmSync(f, { force: true });
+  revalidatePath("/personnages");
+  revalidatePath("/videos-ia");
+}
+
+// Fait dire une courte phrase au personnage avec sa voix et son jeu, pour l'écouter avant de l'utiliser (quelques centimes au plus).
+export async function previewCharacterVoice(id: string) {
+  const u = await requireUser();
+  const c = await prisma.character.findFirst({ where: { id, userId: u.id } });
+  if (!c) return;
+  const file = voiceSample(id);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.rmSync(voiceSampleError(id), { force: true });
+  const text = `Salut, moi c'est ${c.name || "ton nouveau personnage"} !${c.personality ? ` On dit que je suis ${c.personality.split(",").slice(0, 2).join(" et ").trim()}.` : ""} Tu vas adorer la suite.`;
+  try { await speak(text, c.voice, file, u.id, voiceDirection(c)); } catch (e) { fs.writeFileSync(voiceSampleError(id), (e as Error).message.slice(0, 300)); }
   revalidatePath("/personnages");
 }
 
