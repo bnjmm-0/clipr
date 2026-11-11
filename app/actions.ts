@@ -8,13 +8,13 @@ import { prisma } from "@/lib/db";
 import { checkPassword, createSession, currentUser, destroySession, hashPassword, requireAdmin, requireUser } from "@/lib/auth";
 import { CREDENTIALS, FEATURES, PLATFORMS, deleteCredential, featureEnabled, getSettings, isPlatform, setCredential, type CredentialName } from "@/lib/settings";
 import { enqueue } from "@/lib/jobs";
-import { chat } from "@/lib/providers/llm";
+import { chat, parseJsonLoose } from "@/lib/providers/llm";
 import { accountSnapshot } from "@/lib/providers/tiktok";
 import { CREATORS } from "@/lib/ai-advice";
 import { TOOL_APPS, pickOptions } from "@/lib/ai-tools";
 import { GEMINI_PREFIX, GEMINI_VOICES, IMAGE_ENGINES, SCRIPT_ENGINES, isElevenVoice, parseVisuals, pickEngine } from "@/lib/engines";
 import { VOICES, isKnownVoice, speak } from "@/lib/providers/tts";
-import { COACH_RULES, voiceDirection } from "@/lib/prompting";
+import { COACH_RULES, SCRIPT_RULES, SERIES_RULES, voiceDirection } from "@/lib/prompting";
 import { readStoryOptions } from "@/lib/story-options";
 import { IMPORT_MAX_BYTES, IMPORT_TYPES, saveCharacterImage, voiceSample, voiceSampleError } from "@/lib/character-import";
 
@@ -275,6 +275,29 @@ export async function reanalyzeCharacter(id: string) {
   if (!c) return;
   await enqueue("character_analyze", { characterId: id });
   revalidatePath("/personnages");
+}
+
+// Aide à l'idée : à partir d'une idée en quelques mots (ou de rien) et des personnages cochés,
+// l'IA propose 3 histoires prêtes à générer (accroche, conflit, retournement, fin). Quelques dixièmes de centime.
+export async function improveStoryIdea(o: { idea: string; cast: string[]; kind: "video" | "series" }): Promise<{ ideas?: { title: string; idea: string }[]; error?: string }> {
+  const u = await requireUser();
+  const cast = o.cast.length ? await prisma.character.findMany({ where: { id: { in: o.cast.slice(0, 6) }, userId: u.id }, select: { name: true, personality: true, look: true } }) : [];
+  const who = cast.length ? cast.map((c) => `- ${c.name} : ${c.personality || "personnalité libre"} (${c.look.slice(0, 120)})`).join("\n") : "Aucun personnage choisi : invente 2 ou 3 fruits avec une personnalité forte.";
+  const series = o.kind === "series";
+  try {
+    const raw = await chat({
+      userId: u.id, json: true, maxTokens: 1200, purpose: "aide à l'idée",
+      system: `Tu es scénariste de mini-feuilletons viraux de personnages IA (fruits, objets, animaux qui parlent) pour TikTok.\n${SCRIPT_RULES}${series ? `\n${SERIES_RULES}` : ""}`,
+      user: `${series ? "Concept de SÉRIE" : "Idée de VIDÉO"} donné par l'utilisateur : « ${o.idea.trim().slice(0, 800) || "(rien : propose librement)"} »
+Personnages :
+${who}
+Propose 3 versions différentes et plus fortes, en français, chacune en 2 à 4 phrases (400 caractères max) : ${series ? "le décor, le rôle de chaque personnage, le fil rouge et ce qui relance chaque épisode" : "ce qui se passe dès la première seconde, le conflit, le retournement et la dernière réplique ou la fin à suivre"}. Utilise les noms des personnages. Garde l'idée de l'utilisateur si elle existe, rends-la plus dramatique ou plus drôle.
+Réponds en JSON : {"ideas":[{"title":"titre court","idea":"…"}]}`,
+    });
+    const ideas = (parseJsonLoose<{ ideas?: { title?: string; idea?: string }[] }>(raw).ideas ?? [])
+      .map((x) => ({ title: String(x.title ?? "").slice(0, 80), idea: String(x.idea ?? "").trim().slice(0, 600) })).filter((x) => x.idea).slice(0, 3);
+    return ideas.length ? { ideas } : { error: "L'IA n'a rien proposé : réessaie." };
+  } catch (e) { return { error: (e as Error).message }; }
 }
 
 // Change la voix d'un personnage (OpenAI, Gemini ou ElevenLabs) ; l'ancien échantillon d'écoute est effacé.

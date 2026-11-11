@@ -30,6 +30,7 @@ function answer(user, wantJson) {
     recette: { brief: "Un ananas jaloux découvre que la pastèque sort avec le melon", format: "dialogue", durationSec: 30, options: { genre: "drame", hook: "medias", ending: "cliffhanger", rhythm: "rapide", setting: "villa avec piscine", light: "golden", style: "3d", framing: "serre", inconnu: "x" },
       characters: [{ name: "Ananas", look: "Ananas anthropomorphe, couronne de feuilles, sourcils froncés", personality: "Jaloux, dramatique" }, { name: "Pastèque", look: "Pastèque ronde, sourire malicieux", personality: "Charmeuse" }] },
   });
+  if (/Propose 3 versions/.test(user)) return JSON.stringify({ ideas: [1, 2, 3].map((i) => ({ title: `Idée de test ${i}`, idea: `Version ${i} : une accroche, un conflit, un retournement et une fin à suivre.` })) });
   if (/Analyse ce personnage/.test(user)) return JSON.stringify({ name: "Mangue Mimi", look: "mangue anthropomorphe orange et jaune, grands yeux bruns brillants, petite bouche souriante, bras et jambes fins, lunettes de soleil roses, collier de perles, peau lisse et brillante, 3D hyperréaliste façon film d'animation", personality: "coquette, sûre d'elle", style: "3D hyperréaliste façon film d'animation" });
   if (/donne un score de 0 à 100/.test(user)) {
     const ids = [...user.matchAll(/^#(\d+) \[/gm)].map((m) => Number(m[1]));

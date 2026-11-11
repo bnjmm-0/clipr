@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import Poller from "@/components/Poller";
 import DurationField from "@/components/DurationField";
+import StoryIdeaField from "@/components/StoryIdeaField";
 import EngineFields from "@/components/EngineFields";
 import StoryOptionsFields from "@/components/StoryOptionsFields";
 import { voiceLabel } from "@/lib/engines";
@@ -38,7 +39,7 @@ export default async function AiVideos({ searchParams }: { searchParams: Promise
   const castPick = characters.length ? (
     <div style={{ gridColumn: "1 / -1" }}><label>Personnages (coche-en plusieurs pour qu'ils se parlent) · <Link href="/personnages" className="credlink">en créer un</Link></label>
       <div className="chips">{characters.map((c) => { const r = refOf(c); return (
-        <label key={c.id}><input type="checkbox" name="cast" value={c.id} defaultChecked={preCast.has(c.id)} /><span>{r.src && <img src={r.src} alt="" className="chipava" />}{c.name}<span className="xs muted" style={{ marginLeft: 6 }}>{voiceLabel(c.voice)}</span></span></label>
+        <label key={c.id}><input type="checkbox" name="cast" value={c.id} data-name={c.name} defaultChecked={preCast.has(c.id)} /><span>{r.src && <img src={r.src} alt="" className="chipava" />}{c.name}<span className="xs muted" style={{ marginLeft: 6 }}>{voiceLabel(c.voice)}</span></span></label>
       ); })}</div></div>
   ) : <p className="xs muted" style={{ gridColumn: "1 / -1", marginTop: 12 }}>Crée tes personnages dans <Link href="/personnages" style={{ textDecoration: "underline" }}>Personnages</Link> : chacun reçoit une fiche de référence qui le garde identique d'une image à l'autre.</p>;
   const formatPick = <div><label>Format</label><select name="format" defaultValue={format === "narration" ? "narration" : "dialogue"}><option value="dialogue">Dialogue entre personnages</option><option value="narration">Narration (voix off)</option></select></div>;
@@ -53,8 +54,7 @@ export default async function AiVideos({ searchParams }: { searchParams: Promise
           <form action={createEpisode} className="panel">
             <h2>Nouvelle vidéo</h2>
             {source && <p className="note" style={{ marginTop: 12 }}>Pré-rempli avec la recette d'une vidéo qui marche : relis la consigne, coche ou décoche les personnages, puis génère. Les personnages créés reçoivent leur fiche en arrière-plan.</p>}
-            <label>Sujet ou consigne</label>
-            <textarea name="brief" rows={3} required defaultValue={idee ?? ""} placeholder="Ex. La fraise découvre que la banane l'a trompée avec le kiwi pendant la soirée piscine" />
+            <StoryIdeaField name="brief" kind="video" label="Sujet ou consigne" defaultValue={idee ?? ""} placeholder="Ex. La fraise découvre que la banane l'a trompée avec le kiwi pendant la soirée piscine" />
             <DurationField defaultValue={Math.max(15, Math.min(600, Number(duree) || 60))} />
             <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: "0 12px" }}>
               {castPick}
@@ -105,7 +105,7 @@ export default async function AiVideos({ searchParams }: { searchParams: Promise
               <summary style={{ cursor: "pointer" }} className="sec">Nouvelle série</summary>
               <form action={createSeries}>
                 <label>Titre</label><input name="title" required placeholder="Fruit Island" />
-                <label>Concept</label><textarea name="premise" rows={3} required placeholder="Des fruits en couple dans une villa : chaque épisode, une trahison, une dispute ou un nouveau couple" />
+                <StoryIdeaField name="premise" kind="series" label="Concept" placeholder="Des fruits en couple dans une villa : chaque épisode, une trahison, une dispute ou un nouveau couple" />
                 <DurationField />
                 <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: "0 12px" }}>{castPick}{formatPick}<div><label>Sous-titres</label><select name="captionStyle">{STYLE_OPTS}</select></div><EngineFields /></div>
                 <StoryOptionsFields id="se" series />
