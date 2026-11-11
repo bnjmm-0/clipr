@@ -63,7 +63,7 @@ async function handle(job: { id: string; type: string; payload: string; projectI
 }
 
 async function onFail(job: { id: string; type: string; payload: string; projectId: string | null; attempts: number }, err: Error) {
-  const final = job.attempts + 1 >= MAX_ATTEMPTS || /insuffisantes|absente|refusée|épuisé|Import par lien|pas de piste|non connecté|désactivée|Aucun modèle/.test(err.message);
+  const final = job.attempts + 1 >= MAX_ATTEMPTS || /insuffisantes|absente|refusée|épuisé|offre gratuite|Import par lien|pas de piste|non connecté|désactivée|Aucun modèle/.test(err.message);
   await prisma.job.update({
     where: { id: job.id },
     data: { state: final ? "failed" : "queued", error: err.message.slice(0, 2000), attempts: { increment: 1 }, runAfter: new Date(Date.now() + 30_000 * (job.attempts + 1)) },

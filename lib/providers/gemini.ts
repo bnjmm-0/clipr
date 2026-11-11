@@ -35,6 +35,8 @@ async function once(body: Record<string, unknown>, key: string): Promise<Interac
   }
   const j = await r.json().catch(() => ({}));
   const raw = JSON.stringify(j);
+  // Modèle absent de l'offre gratuite (« limit: 0 … Free Tier ») : réessayer ne sert à rien.
+  if (r.status === 429 && /limit: 0|free tier/i.test(raw)) throw new Error(`Le modèle ${body.model} n'est pas inclus dans l'offre gratuite de Gemini : active la facturation sur aistudio.google.com (Billing), puis relance.`);
   if (r.status === 429) throw new Busy("Gemini limite le nombre de demandes : attends une minute (ou active la facturation sur AI Studio), puis relance.");
   if (r.status >= 500 || /high demand|overloaded|UNAVAILABLE/i.test(raw)) throw new Busy("Gemini est saturé en ce moment chez Google : relance dans quelques minutes.");
   if (!r.ok) throw apiError("Gemini", r.status, j);
