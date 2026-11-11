@@ -53,7 +53,7 @@ async function speakGemini(text: string, voice: string, outFile: string, userId:
   });
   const wav = `${outFile}.wav`;
   await saveOutput(j, "audio", wav);
-  try { await run("ffmpeg", ["-y", "-v", "error", "-i", wav, "-ac", "1", "-b:a", "128k", outFile]); } finally { fs.rmSync(wav, { force: true }); }
+  try { await run("ffmpeg", ["-y", "-v", "error", "-i", wav, "-ac", "1", "-ar", "44100", "-b:a", "128k", outFile]); } finally { fs.rmSync(wav, { force: true }); }
   const tokens = j.usage?.total_output_tokens ?? 0;
   await recordUsage({ userId, provider: "google", kind: "tts", model: GEMINI_TTS, units: tokens, unitLabel: "tokens audio", costUsd: (tokens * priceOf(`google:${GEMINI_TTS}`, s.prices)) / 1e6, meta: { voice } });
 }

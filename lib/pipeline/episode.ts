@@ -212,9 +212,10 @@ export async function processEpisode(episodeId: string) {
           "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", part]);
       }
     }
-    // Voix collée à la scène
+    // Voix collée à la scène, toujours au même format audio (48 kHz stéréo) : les voix d'OpenAI, de Gemini et
+    // d'ElevenLabs n'ont pas la même fréquence, et le montage recolle les scènes sans réencoder le son.
     const av = path.join(dir, `av_${i}.mp4`);
-    if (!fs.existsSync(av)) await run("ffmpeg", ["-y", "-v", "error", "-i", part, "-i", voice, "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac", "-b:a", "160k", "-af", "apad", "-t", dur.toFixed(2), av]);
+    if (!fs.existsSync(av)) await run("ffmpeg", ["-y", "-v", "error", "-i", part, "-i", voice, "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac", "-b:a", "160k", "-ar", "48000", "-ac", "2", "-af", "apad", "-t", dur.toFixed(2), av]);
     parts.push(av);
     t += dur;
   }

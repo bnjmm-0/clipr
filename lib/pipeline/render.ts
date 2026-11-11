@@ -58,8 +58,9 @@ export async function renderClip(o: {
   // Barre de progression animée en bas + sous-titres animés.
   const filters = `${base};color=c=0xFFE100:s=1080x10:r=30[bar];[v0][bar]overlay=x='-W+W*t/${dur.toFixed(2)}':y=H-10:shortest=1[v1];` +
     `[v1]subtitles='${assArg}'${o.watermark ? `,drawtext=text='${o.watermark}':fontcolor=white@0.6:fontsize=36:x=w-tw-30:y=60` : ""}[v]`;
-  await run("ffmpeg", ["-y", "-ss", o.s.toFixed(2), "-t", dur.toFixed(2), "-i", o.src, "-filter_complex", filters,
+  // -v error : en cas d'échec, le message montre la vraie cause et non les statistiques d'encodage.
+  await run("ffmpeg", ["-y", "-v", "error", "-ss", o.s.toFixed(2), "-t", dur.toFixed(2), "-i", o.src, "-filter_complex", filters,
     "-map", "[v]", "-map", "0:a?", "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-r", "30", "-pix_fmt", "yuv420p",
     "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", o.outFile]);
-  await run("ffmpeg", ["-y", "-ss", String(Math.min(1, dur / 2)), "-i", o.outFile, "-frames:v", "1", "-vf", "scale=360:-2", o.thumbFile]);
+  await run("ffmpeg", ["-y", "-v", "error", "-ss", String(Math.min(1, dur / 2)), "-i", o.outFile, "-frames:v", "1", "-vf", "scale=360:-2", o.thumbFile]);
 }
