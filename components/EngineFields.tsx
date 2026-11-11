@@ -51,9 +51,11 @@ export default async function EngineFields({ only = ["script", "voice", "visuals
       {only.includes("voice") && <div><label>Voix off</label><select name="voice" defaultValue=""><VoiceOptions withDefault /></select></div>}
       {only.includes("visuals") && (
         <div><label>Visuels</label><select name="visuals" defaultValue="image">
-          <option value="image">Images animées (moins cher)</option>
-          {s.videoModel && <option value="video" disabled={missing("replicate")}>Plans vidéo · {s.videoModel}</option>}
-          {VIDEO_ENGINES.map((e) => opt(e, `video:${e.id}`, "Plans vidéo · "))}
+          <option value="image">Photos avec zoom · les persos ne bougent pas (le moins cher)</option>
+          <optgroup label="Vidéo animée · les persos bougent (payé à la seconde)">
+            {s.videoModel && <option value="video" disabled={missing("replicate")}>{s.videoModel}</option>}
+            {VIDEO_ENGINES.map((e) => opt(e, `video:${e.id}`))}
+          </optgroup>
         </select></div>
       )}
       {only.includes("image") && <div><label>IA des images</label><select name="engineImage" defaultValue={defaultImageEngine(s)}>{IMAGE_ENGINES.map((e) => opt(e))}</select></div>}
