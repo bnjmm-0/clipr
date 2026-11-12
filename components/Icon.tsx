@@ -18,6 +18,7 @@ const P: Record<string, string> = {
   check: "M20 6L9 17l-5-5",
   x: "M18 6L6 18M6 6l12 12",
   play: "M6 4l14 8-14 8z",
+  home: "M3 10.5L12 3l9 7.5M5 9.5V21h5v-6h4v6h5V9.5",
   calendar: "M3 5h18v16H3zM16 3v4M8 3v4M3 10h18",
   user: "M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
   layers: "M12 2l10 5-10 5L2 7zM2 17l10 5 10-5M2 12l10 5 10-5",

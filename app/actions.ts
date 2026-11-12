@@ -31,7 +31,7 @@ export async function register(_: FormState, fd: FormData): Promise<FormState> {
   const u = await prisma.user.create({ data: { email: p.data.email, name: String(fd.get("name") || "") || null, passwordHash: await hashPassword(p.data.password), role: first ? "admin" : "user" } });
   if (!first) await prisma.creditLedger.create({ data: { userId: u.id, minutes: s.freeMinutes, reason: "Essai gratuit" } });
   await createSession(u.id);
-  redirect(first ? "/reglages" : "/tableau-de-bord");
+  redirect(first ? "/reglages" : "/studio");
 }
 
 export async function login(_: FormState, fd: FormData): Promise<FormState> {
@@ -39,7 +39,7 @@ export async function login(_: FormState, fd: FormData): Promise<FormState> {
   const u = await prisma.user.findUnique({ where: { email } });
   if (!u || !(await checkPassword(String(fd.get("password") || ""), u.passwordHash))) return { error: "Email ou mot de passe incorrect" };
   await createSession(u.id);
-  redirect("/tableau-de-bord");
+  redirect("/studio");
 }
 
 export async function logout() { await destroySession(); redirect("/"); }

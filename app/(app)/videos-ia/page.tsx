@@ -5,6 +5,7 @@ import { credentialStatus, getSettings } from "@/lib/settings";
 import Poller from "@/components/Poller";
 import DurationField from "@/components/DurationField";
 import StoryIdeaField from "@/components/StoryIdeaField";
+import QuickRecipes from "@/components/QuickRecipes";
 import EngineFields from "@/components/EngineFields";
 import StoryOptionsFields from "@/components/StoryOptionsFields";
 import { voiceLabel } from "@/lib/engines";
@@ -67,15 +68,21 @@ export default async function AiVideos({ searchParams }: { searchParams: Promise
             <h2>Nouvelle vidéo</h2>
             {source && <p className="note" style={{ marginTop: 12 }}>Pré-rempli avec la recette d'une vidéo qui marche : relis la consigne, coche ou décoche les personnages, puis génère. Les personnages créés reçoivent leur fiche en arrière-plan.</p>}
             <StoryIdeaField name="brief" kind="video" label="Sujet ou consigne" defaultValue={idee ?? ""} placeholder="Ex. La fraise découvre que la banane l'a trompée avec le kiwi pendant la soirée piscine" />
+            <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: "0 12px" }}>{castPick}</div>
+            <QuickRecipes />
             <DurationField defaultValue={Math.max(15, Math.min(600, Number(duree) || 60))} />
-            <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: "0 12px" }}>
-              {castPick}
-              {formatPick}
-              <div><label>Sous-titres</label><select name="captionStyle">{STYLE_OPTS}</select></div>
-              <div><label>Langue</label><select name="language"><option value="fr">Français</option><option value="en">Anglais</option><option value="es">Espagnol</option><option value="ar">Arabe</option></select></div>
-              <EngineFields />
-            </div>
-            <StoryOptionsFields id="ep" open defaults={preOpts} />
+            <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: "0 12px" }}><EngineFields only={["visuals"]} /></div>
+            {/* L'essentiel reste visible ; le reste a de bons réglages par défaut. */}
+            <details className="moreopts">
+              <summary>Réglages techniques <span className="xs muted">format, sous-titres, langue, IA du script, de la voix et des images</span></summary>
+              <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: "0 12px" }}>
+                {formatPick}
+                <div><label>Sous-titres</label><select name="captionStyle">{STYLE_OPTS}</select></div>
+                <div><label>Langue</label><select name="language"><option value="fr">Français</option><option value="en">Anglais</option><option value="es">Espagnol</option><option value="ar">Arabe</option></select></div>
+                <EngineFields only={["script", "voice", "image"]} />
+              </div>
+            </details>
+            <StoryOptionsFields id="ep" open={!!opts} defaults={preOpts} />
             {lipBox}
             {reviewBox}
             <input type="hidden" name="origin" value={source ? "manual" : idee ? "trend" : "manual"} />
@@ -99,7 +106,7 @@ export default async function AiVideos({ searchParams }: { searchParams: Promise
         </div>
 
         <div className="stack-24">
-          <div className="panel">
+          <div className="panel" id="series">
             <h2>Séries</h2>
             <ol className="xs sec" style={{ margin: "8px 0 0", paddingLeft: 18, lineHeight: 1.7 }}>
               <li>Dans <Link href="/personnages" className="credlink">Personnages</Link>, crée 2 à 4 fruits et donne à chacun sa voix (ElevenLabs, Gemini ou OpenAI) : « Écouter sa voix » pour vérifier.</li>

@@ -10,6 +10,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const u = await requireUser();
   const f = (await getSettings()).features;
   const create = [
+    { href: "/studio", label: "Accueil", icon: "home" },
     f.clips && { href: "/tableau-de-bord", label: "Clips", icon: "clips" },
     f.aiVideos && { href: "/videos-ia", label: "Vidéos IA et séries", icon: "film" },
     f.aiVideos && { href: "/personnages", label: "Personnages", icon: "user" },

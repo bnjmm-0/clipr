@@ -55,7 +55,7 @@ const FAQ = [
 
 export default async function Home() {
   const u = await currentUser();
-  const cta = u ? "/tableau-de-bord" : "/inscription";
+  const cta = u ? "/studio" : "/inscription";
   const paste = (
     <form action={cta} className="paste">
       <input name="url" aria-label="Lien de la vidéo" placeholder="Colle le lien d'une vidéo" />

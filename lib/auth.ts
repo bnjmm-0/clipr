@@ -39,7 +39,7 @@ export async function requireUser() {
 
 export async function requireAdmin() {
   const u = await requireUser();
-  if (u.role !== "admin") redirect("/tableau-de-bord");
+  if (u.role !== "admin") redirect("/studio");
   return u;
 }
 
