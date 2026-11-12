@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import NewProject from "@/components/NewProject";
 import AiCardFx from "@/components/AiCardFx";
+import { TroupeLoop } from "@/components/PageHero";
 import EngineFields from "@/components/EngineFields";
 
 const STATUS: Record<string, [string, string]> = { ready: ["Prêt", "ok"], failed: ["Échec", "err"] };
@@ -23,8 +24,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   return (
     <div className="page">
       <AiCardFx />
-      <div className="panel aitool aiproject clipshero">
-        <span className="aibg" style={{ backgroundImage: "url(/clips/hero.webp)" }} aria-hidden />
+      <div className="panel aitool aiproject clipshero troupehero">
+        <span className="aibg" style={{ backgroundImage: "url(/troupe/clips.webp)" }} aria-hidden><TroupeLoop name="clips" /></span>
         <div style={{ maxWidth: 600 }}>
           <h1>Clips</h1>
           <p className="sec" style={{ marginTop: 8 }}>Importe une vidéo longue : Clipr garde les meilleurs passages et les rend en vertical avec sous-titres animés et miniature.</p>

@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import Poller from "@/components/Poller";
 import { createGeneration } from "@/app/actions";
+import PageHero from "@/components/PageHero";
+import AiCardFx from "@/components/AiCardFx";
 
 export default async function Generate() {
   const u = await requireUser();
@@ -12,7 +14,8 @@ export default async function Generate() {
   return (
     <div className="page">
       <Poller active={gens.some((g) => ["queued", "running"].includes(g.status))} />
-      <div className="pagehead"><div><h1>Images et vidéos</h1><p>Un visuel ou un plan vidéo à partir d'une description, pour une miniature, un fond ou un plan de coupe.</p></div></div>
+      <AiCardFx />
+      <PageHero name="generer" title="Images et vidéos"><p className="sec" style={{ marginTop: 8 }}>Un visuel ou un plan vidéo à partir d'une description, pour une miniature, un fond ou un plan de coupe.</p></PageHero>
       <form action={createGeneration} className="panel" style={{ maxWidth: 720 }}>
         <label>Décrivez ce que vous voulez</label>
         <textarea name="prompt" rows={3} required placeholder="Un micro de podcast sous une lumière néon rose, plan serré, format vertical" />

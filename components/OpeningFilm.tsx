@@ -79,11 +79,11 @@ export default function OpeningFilm({ cta, label }: { cta: string; label: string
         <canvas ref={canvas} aria-hidden="true" />
         <div className="shade" aria-hidden="true" />
         <div className="beat a" ref={set(0)}>
-          <h1>Le studio qui monte tes vidéos à ta place</h1>
-          <p>Podcasts, lives, interviews : Clipr en tire des clips verticaux prêts à publier.</p>
+          <h1>Le studio où tes fruits deviennent des stars</h1>
+          <p>Personnages IA, séries, clips, tendances et publication : Clipr tourne tes vidéos courtes à ta place.</p>
         </div>
         <div className="beat b" ref={set(1)} style={{ opacity: 0, visibility: "hidden" }}>
-          <h2>Chaque moment fort, repéré, recadré, <span className="word">sous‑titré</span></h2>
+          <h2>Une idée, une troupe, un épisode qui <span className="word">accroche</span></h2>
         </div>
         <div className="beat c" ref={set(2)} style={{ opacity: 0, visibility: "hidden" }}>
           <p>Clips, séries IA, tendances et publication, au même endroit.</p>

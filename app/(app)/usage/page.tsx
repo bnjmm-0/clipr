@@ -1,4 +1,3 @@
-import { existsSync } from "node:fs";
 import { join } from "node:path";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
@@ -6,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { YT_DAILY_QUOTA, YT_QUOTA, quotaDayStart } from "@/lib/providers/youtube";
 import BarsChart from "@/components/BarsChart";
 import AiCardFx from "@/components/AiCardFx";
+import { TroupeLoop } from "@/components/PageHero";
 
 const usd = (n: number) => `${n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: n > 0 && n < 0.01 ? 4 : 2 })} $`;
 const num = (n: number, d = 0) => n.toLocaleString("fr-FR", { maximumFractionDigits: d });
@@ -76,10 +76,8 @@ export default async function Usage({ searchParams }: { searchParams: Promise<{ 
   return (
     <div className="page">
       <AiCardFx />
-      <div className="panel aitool aiproject clipshero usagehero">
-        <span className="aibg" style={{ backgroundImage: "url(/usage/hero.webp)" }} aria-hidden>
-          {existsSync(join(process.cwd(), "public/usage/hero.mp4")) && <video className="bgvid" src="/usage/hero.mp4" muted loop playsInline preload="none" />}
-        </span>
+      <div className="panel aitool aiproject clipshero usagehero troupehero">
+        <span className="aibg" style={{ backgroundImage: "url(/troupe/usage.webp)" }} aria-hidden><TroupeLoop name="usage" /></span>
         <div style={{ maxWidth: 560 }}>
           <h1>Usage</h1>
           <p className="sec" style={{ marginTop: 8 }}>Ce que coûtent les appels aux services d'IA, estimé avec les tarifs saisis dans Réglages. La facture exacte reste celle de chaque fournisseur.{admin ? " Vue de tous les utilisateurs." : ""}</p>

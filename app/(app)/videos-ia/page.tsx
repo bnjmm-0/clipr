@@ -10,6 +10,8 @@ import StoryOptionsFields from "@/components/StoryOptionsFields";
 import { voiceLabel } from "@/lib/engines";
 import fs from "node:fs";
 import { createEpisode, createSeries, deleteCharacter, nextEpisode, remakeCharacterRef } from "@/app/actions";
+import PageHero from "@/components/PageHero";
+import AiCardFx from "@/components/AiCardFx";
 
 const STATUS: Record<string, [string, string]> = { ready: ["Prête", "ok"], failed: ["Échec", "err"], review: ["À valider", "live"] };
 const STYLE_OPTS = <><option value="bold">Pop</option><option value="bounce">Rebond</option><option value="box">Encadré</option><option value="typewriter">Machine à écrire</option><option value="none">Aucun sous-titre (titre d'accroche gardé)</option><option value="notext">Aucun texte à l'écran</option></>;
@@ -56,7 +58,8 @@ export default async function AiVideos({ searchParams }: { searchParams: Promise
   return (
     <div className="page">
       <Poller active={pending || episodes.some((e) => ["queued", "processing"].includes(e.status))} ms={4000} />
-      <div className="pagehead"><div><h1>Vidéos IA et séries</h1><p>Des personnages, une idée : Clipr écrit le script ou le dialogue, garde chaque personnage identique grâce à sa fiche de référence, te montre les images à valider, puis fait les voix, l'animation et le montage avec sous-titres. Chaque épisode d'une série se souvient des précédents.</p></div></div>
+      <AiCardFx />
+      <PageHero name="videos" title="Vidéos IA et séries"><p className="sec" style={{ marginTop: 8 }}>Des personnages, une idée : Clipr écrit le script ou le dialogue, garde chaque personnage identique grâce à sa fiche de référence, te montre les images à valider, puis fait les voix, l'animation et le montage avec sous-titres. Chaque épisode d'une série se souvient des précédents.</p></PageHero>
 
       <div className="grid" style={{ gridTemplateColumns: "minmax(0,1.2fr) minmax(0,.8fr)", gap: 24, alignItems: "start" }}>
         <div className="stack-24">
@@ -82,7 +85,7 @@ export default async function AiVideos({ searchParams }: { searchParams: Promise
 
           <div className="panel" style={{ padding: "8px 24px" }}>
             <h2 style={{ padding: "16px 0 8px" }}>Vidéos enregistrées</h2>
-            {episodes.length === 0 && <p className="sec small" style={{ paddingBottom: 16 }}>Aucune vidéo pour l'instant.</p>}
+            {episodes.length === 0 && <div className="emptystate troupe"><img src="/troupe/vide-videos.webp" alt="" /><p><b>Aucune vidéo pour l'instant</b></p><p className="small sec">Banane a la caméra prête : écris ton idée, coche tes personnages, puis « Générer la vidéo ».</p></div>}
             {episodes.map((e) => {
               const [label, cls] = STATUS[e.status] ?? [`${e.stage} · ${e.progress} %`, "live"];
               return (

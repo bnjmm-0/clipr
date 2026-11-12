@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { credentialStatus, getSettings } from "@/lib/settings";
 import Poller from "@/components/Poller";
 import AiCardFx from "@/components/AiCardFx";
+import { TroupeLoop } from "@/components/PageHero";
 import { refreshInspirationNow } from "@/app/actions";
 import { overSubs, viewsPerDay } from "@/lib/inspiration";
 import { fmt } from "@/lib/analytics";
@@ -30,8 +31,8 @@ export default async function Inspiration({ searchParams }: { searchParams: Prom
     <div className="page">
       <Poller active={busy} ms={5000} />
       <AiCardFx />
-      <div className="panel aitool aiproject clipshero">
-        <span className="aibg" style={{ backgroundImage: "url(/accueil/f-series.webp)" }} aria-hidden />
+      <div className="panel aitool aiproject clipshero troupehero">
+        <span className="aibg" style={{ backgroundImage: "url(/troupe/inspiration.webp)" }} aria-hidden><TroupeLoop name="inspiration" /></span>
         <div className="row" style={{ alignItems: "flex-start", gap: 16 }}>
           <div style={{ maxWidth: 600 }}>
             <h1>Inspiration fruits IA</h1>
@@ -50,7 +51,7 @@ export default async function Inspiration({ searchParams }: { searchParams: Prom
       {!creds.youtube ? (
         <p className="note">Ajoute la clé « YouTube Data API » dans Réglages : Clipr s'en sert pour trouver les vidéos qui marchent.</p>
       ) : videos.length === 0 ? (
-        <div className="emptystate"><img src="/accueil/f-series.webp" alt="" /><p><b>{busy ? "Recherche des vidéos qui marchent…" : "Aucune vidéo pour l'instant"}</b></p><p className="small sec">{busy ? "Environ une minute." : "Clique sur Actualiser pour lancer la recherche."}</p></div>
+        <div className="emptystate troupe"><img src="/troupe/vide-videos.webp" alt="" /><p><b>{busy ? "Recherche des vidéos qui marchent…" : "Aucune vidéo pour l'instant"}</b></p><p className="small sec">{busy ? "Environ une minute." : "Clique sur Actualiser pour lancer la recherche."}</p></div>
       ) : (
         <>
           <div className="row" style={{ marginBottom: 16, gap: 12 }}>

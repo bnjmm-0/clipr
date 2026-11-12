@@ -6,6 +6,7 @@ import { getSettings } from "@/lib/settings";
 import { voiceLabel } from "@/lib/engines";
 import Poller from "@/components/Poller";
 import AiCardFx from "@/components/AiCardFx";
+import { TroupeLoop } from "@/components/PageHero";
 import CharacterBuilder from "@/components/CharacterBuilder";
 import CharacterImport from "@/components/CharacterImport";
 import { isImported, voiceSample, voiceSampleError } from "@/lib/character-import";
@@ -39,8 +40,8 @@ export default async function Characters() {
     <div className="page">
       <Poller active={busy} ms={4000} />
       <AiCardFx />
-      <div className="panel aitool aiproject clipshero">
-        <span className="aibg" style={{ backgroundImage: "url(/accueil/f-series.webp)" }} aria-hidden />
+      <div className="panel aitool aiproject clipshero troupehero">
+        <span className="aibg" style={{ backgroundImage: "url(/troupe/personnages.webp)" }} aria-hidden><TroupeLoop name="personnages" /></span>
         <div style={{ maxWidth: 620 }}>
           <h1>Personnages</h1>
           <p className="sec" style={{ marginTop: 8 }}>Crée tes fruits stars : Clipr dessine leur fiche de référence (3 propositions au choix), ou importe ceux que tu as faits ailleurs. Ils restent identiques dans toutes tes vidéos. Ils apparaissent ensuite dans « Personnages » quand tu crées une vidéo ou une série.</p>
@@ -55,7 +56,7 @@ export default async function Characters() {
         </div>
         <div className="stack-16">
           <h2>Mes personnages <span className="xs muted num">{characters.length}</span></h2>
-          {characters.length === 0 && <p className="sec small">Aucun personnage pour l'instant : crée le premier à gauche.</p>}
+          {characters.length === 0 && <div className="emptystate troupe"><img src="/troupe/vide-personnages.webp" alt="" /><p><b>Le plateau est vide</b></p><p className="small sec">Fraise attend ses premiers acteurs : crée ton premier fruit à gauche, ou importe-le.</p></div>}
           {characters.map((c) => {
             const v = view(c);
             return (

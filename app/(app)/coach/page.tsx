@@ -3,6 +3,8 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { featureEnabled } from "@/lib/settings";
 import CoachForm from "@/components/CoachForm";
+import PageHero from "@/components/PageHero";
+import AiCardFx from "@/components/AiCardFx";
 
 // Rendu Markdown minimal et sûr (le texte est échappé par React).
 function Md({ text }: { text: string }) {
@@ -22,8 +24,8 @@ export default async function Coach() {
   const reports = await prisma.coachReport.findMany({ where: { userId: u.id }, orderBy: { createdAt: "desc" }, take: 5 });
   return (
     <div className="page">
-      <div className="pagehead"><div><h1>Coach TikTok</h1><p>Diagnostic de tes vidéos, planning de la semaine et trois scripts prêts à tourner.{tt ? ` Compte analysé : ${tt.displayName ?? "TikTok"}.` : ""}</p></div>
-        <span className="sp" />{!tt && <Link href="/comptes" className="btn ghost sm">Connecter TikTok</Link>}</div>
+      <AiCardFx />
+      <PageHero name="coach" title="Coach TikTok"><p className="sec" style={{ marginTop: 8 }}>Diagnostic de tes vidéos, planning de la semaine et trois scripts prêts à tourner.{tt ? ` Compte analysé : ${tt.displayName ?? "TikTok"}.` : ""}</p>{!tt && <div className="row" style={{ marginTop: 16 }}><Link href="/comptes" className="btn ghost sm">Connecter TikTok</Link></div>}</PageHero>
       <div className="grid" style={{ gridTemplateColumns: "minmax(0,.8fr) minmax(0,1.2fr)", gap: 24, alignItems: "start" }}>
         <CoachForm connected={!!tt} />
         <div className="stack-24">

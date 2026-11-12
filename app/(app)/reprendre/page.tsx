@@ -5,6 +5,8 @@ import { getSettings } from "@/lib/settings";
 import RemixForm from "@/components/RemixForm";
 import EngineFields from "@/components/EngineFields";
 import StoryOptionsFields from "@/components/StoryOptionsFields";
+import PageHero from "@/components/PageHero";
+import AiCardFx from "@/components/AiCardFx";
 
 export default async function Remix({ searchParams }: { searchParams: Promise<{ url?: string }> }) {
   const u = await requireUser();
@@ -15,7 +17,8 @@ export default async function Remix({ searchParams }: { searchParams: Promise<{ 
   const remixes = await prisma.episode.findMany({ where: { userId: u.id, origin: "remix" }, orderBy: { createdAt: "desc" }, take: 20 });
   return (
     <div className="page">
-      <div className="pagehead"><div><h1>Reprendre une vidéo</h1><p>Clipr transcrit une vidéo qui marche, en analyse la mécanique (accroche, rythme, chute) et écrit ta propre version, doublée et illustrée, à la durée que tu choisis.</p></div></div>
+      <AiCardFx />
+      <PageHero name="reprendre" title="Reprendre une vidéo"><p className="sec" style={{ marginTop: 8 }}>Clipr transcrit une vidéo qui marche, en analyse la mécanique (accroche, rythme, chute) et écrit ta propre version, doublée et illustrée, à la durée que tu choisis.</p></PageHero>
       <div className="grid" style={{ gridTemplateColumns: "minmax(0,1.1fr) minmax(0,.9fr)", gap: 24, alignItems: "start" }}>
         <RemixForm characters={characters} engines={<><EngineFields /><div style={{ gridColumn: "1 / -1" }}><StoryOptionsFields id="rx" /></div></>} defaultUrl={url} />
         <div className="panel" style={{ padding: "8px 24px" }}>

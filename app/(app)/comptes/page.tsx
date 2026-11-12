@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { credentialStatus, getSettings } from "@/lib/settings";
 import { parseAuto } from "@/lib/autopublish";
 import { cancelPublication, disconnectAccount, saveAutoPublish } from "@/app/actions";
+import PageHero from "@/components/PageHero";
+import AiCardFx from "@/components/AiCardFx";
 
 const LABEL: Record<string, string> = { tiktok: "TikTok", facebook: "Facebook", youtube: "YouTube" };
 
@@ -20,7 +22,8 @@ export default async function Accounts() {
   ].filter((p) => p.on);
   return (
     <div className="page">
-      <div className="pagehead"><div><h1>Comptes et publication</h1><p>Connecte TikTok, ta Page Facebook et ta chaîne YouTube, puis choisis tes créneaux : chaque vidéo prête part toute seule au prochain créneau libre.</p></div></div>
+      <AiCardFx />
+      <PageHero name="comptes" title="Comptes et publication"><p className="sec" style={{ marginTop: 8 }}>Connecte TikTok, ta Page Facebook et ta chaîne YouTube, puis choisis tes créneaux : chaque vidéo prête part toute seule au prochain créneau libre.</p></PageHero>
       <div className="grid" style={{ gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 24, alignItems: "start" }}>
         <div className="panel">
           <h2>Comptes connectés</h2>

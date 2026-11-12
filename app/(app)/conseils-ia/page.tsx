@@ -4,6 +4,7 @@ import { FEATURES, getSettings } from "@/lib/settings";
 import { ADVICE_DATE, CREATORS, PROJECTS, TOOLBOX, type AiTool } from "@/lib/ai-advice";
 import AiCardFx from "@/components/AiCardFx";
 import { GLOW } from "@/lib/ai-glow";
+import PageHero from "@/components/PageHero";
 
 // Couleur des effets de survol, prise sur l'illustration de la bulle.
 const glow = (key: string) => ({ "--glow": GLOW[key] }) as React.CSSProperties;
@@ -25,7 +26,7 @@ export default async function AiAdvice({ searchParams }: { searchParams: Promise
   return (
     <div className="page">
       <AiCardFx key={`fx-${p.id}`} />
-      <div className="pagehead"><div><h1>Conseils IA</h1><p>Quelles IA utiliser selon ton projet, étape par étape. Sélection de {ADVICE_DATE} : les outils évoluent vite, vérifie les prix et les conditions d'usage commercial sur leur site.</p></div></div>
+      <PageHero name="conseils" title="Conseils IA"><p className="sec" style={{ marginTop: 8 }}>Quelles IA utiliser selon ton projet, étape par étape. Sélection de {ADVICE_DATE} : les outils évoluent vite, vérifie les prix et les conditions d'usage commercial sur leur site.</p></PageHero>
 
       <div className="row" style={{ gap: 8, flexWrap: "wrap", marginBottom: 24 }}>
         {PROJECTS.map((x) => (

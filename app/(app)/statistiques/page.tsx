@@ -8,6 +8,7 @@ import BarsChart from "@/components/BarsChart";
 import Thumb from "@/components/Thumb";
 import Poller from "@/components/Poller";
 import AiCardFx from "@/components/AiCardFx";
+import { TroupeLoop } from "@/components/PageHero";
 import { refreshStats } from "@/app/actions";
 
 const LABEL: Record<string, string> = { tiktok: "TikTok", facebook: "Facebook", youtube: "YouTube" };
@@ -46,8 +47,8 @@ export default async function Stats({ searchParams }: { searchParams: Promise<{ 
     <div className="page">
       <Poller active={running > 0} ms={4000} />
       <AiCardFx />
-      <div className="panel aitool aiproject clipshero">
-        <span className="aibg" style={{ backgroundImage: "url(/stats/hero.webp)" }} aria-hidden />
+      <div className="panel aitool aiproject clipshero troupehero">
+        <span className="aibg" style={{ backgroundImage: "url(/troupe/statistiques.webp)" }} aria-hidden><TroupeLoop name="statistiques" /></span>
         <div className="row" style={{ alignItems: "flex-start", gap: 16 }}>
           <div style={{ maxWidth: 560 }}>
             <h1>Statistiques</h1>

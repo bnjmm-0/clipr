@@ -28,7 +28,7 @@ const STEPS = [
 
 const FEATURES = [
   { img: "/accueil/f-clips.webp", glow: "245 217 10", icon: "clips", t: "Clips depuis une vidéo longue", d: "Transcription mot à mot, chaque passage noté sur 100, recadrage 9:16 qui suit la personne qui parle.", size: "wide" },
-  { img: "/accueil/f-series.webp", glow: "255 170 70", icon: "film", t: "Séries vidéo IA", d: "Un personnage, une idée de série : chaque épisode est écrit, doublé, illustré et enregistré." },
+  { img: "/troupe/videos.webp", glow: "255 170 70", icon: "film", t: "Séries vidéo IA", d: "Tes fruits stars, une idée de série : chaque épisode est écrit, doublé avec la voix de chaque perso, animé et enregistré." },
   { img: "/accueil/f-remix.webp", glow: "80 200 255", icon: "copy", t: "Reprendre une vidéo", d: "Clipr analyse la structure d'une vidéo qui marche et écrit une version originale avec ton personnage." },
   { img: "/accueil/f-trends.webp", glow: "90 170 255", icon: "trend", t: "Tendances toutes les 6 h", d: "Les vidéos qui montent sur YouTube France et des idées prêtes à produire." },
   { img: "/accueil/f-publish.webp", glow: "255 200 80", icon: "send", t: "Publication planifiée", d: "TikTok, Facebook et YouTube : direct, planifié ou automatique sur tes créneaux." },
@@ -40,7 +40,7 @@ const STYLES = [["bold", "Pop"], ["bounce", "Rebond"], ["box", "Encadré"], ["ty
 const AUDIENCES = [
   { img: "/accueil/aud-podcast.webp", glow: "255 180 90", t: "Podcasts", d: "Une heure d'épisode devient une semaine de clips." },
   { img: "/accueil/aud-streamer.webp", glow: "190 110 255", t: "Streamers", d: "Les meilleurs moments du live, prêts le lendemain." },
-  { img: "/accueil/aud-faceless.webp", glow: "245 200 90", t: "Chaînes sans visage", d: "Séries IA avec personnage, voix et images." },
+  { img: "/troupe/personnages.webp", glow: "245 200 90", t: "Comptes de fruits IA", d: "Une troupe de personnages, des feuilletons qui accrochent, publiés chaque jour." },
   { img: "/accueil/aud-coach.webp", glow: "255 200 120", t: "Coachs et conférenciers", d: "Tes conférences découpées en conseils courts." },
 ];
 
@@ -70,7 +70,7 @@ export default async function Home() {
     <AiCardFx />
     <main className="wrap">
       <section className="hero lhero" id="produit">
-        <span className="herobg" aria-hidden>{loop("/accueil/hero-glow.webp") && <video className="bgvid" src={loop("/accueil/hero-glow.webp")!} muted loop playsInline preload="none" />}</span>
+        <span className="herobg" style={{ backgroundImage: "url(/troupe/hero.webp)", opacity: 0.45 }} aria-hidden>{loop("/troupe/hero.webp") && <video className="bgvid" src={loop("/troupe/hero.webp")!} muted loop playsInline preload="none" />}</span>
         <div className="enter">
           <span className="eyebrow"><i />Clips, séries IA, tendances, publication</span>
           <h2 className="h1">Tes vidéos longues deviennent des clips qui <span className="word">accrochent</span></h2>

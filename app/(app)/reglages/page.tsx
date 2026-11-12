@@ -4,6 +4,8 @@ import { CREDENTIALS, FEATURES, credentialStatus, getSettings } from "@/lib/sett
 import { DEFAULT_PRICES } from "@/lib/usage";
 import CredentialRow from "@/components/CredentialRow";
 import { grantMinutes, saveFeatures, saveProviders, switchToGemini } from "@/app/actions";
+import PageHero from "@/components/PageHero";
+import AiCardFx from "@/components/AiCardFx";
 
 export default async function Settings() {
   await requireAdmin();
@@ -13,7 +15,8 @@ export default async function Settings() {
   const appUrl = process.env.APP_URL ?? "http://localhost:3000";
   return (
     <div className="page">
-      <div className="pagehead"><div><h1>Réglages</h1><p>Tu choisis les fonctions de l'appli et tu utilises tes propres clés API : chaque appel est facturé directement sur ton compte fournisseur.</p></div></div>
+      <AiCardFx />
+      <PageHero name="reglages" title="Réglages"><p className="sec" style={{ marginTop: 8 }}>Tu choisis les fonctions de l'appli et tu utilises tes propres clés API : chaque appel est facturé directement sur ton compte fournisseur.</p></PageHero>
       <div className="grid" style={{ gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 24, alignItems: "start" }}>
         <div className="stack-24">
           <form action={saveFeatures} className="panel">

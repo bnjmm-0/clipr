@@ -6,7 +6,11 @@ import type { FormState } from "@/app/actions";
 export default function AuthForm({ action, mode }: { action: (s: FormState, f: FormData) => Promise<FormState>; mode: "login" | "register" }) {
   const [state, run, pending] = useActionState(action, undefined);
   return (
-    <form action={run} className="panel enter" style={{ maxWidth: 400, margin: "96px auto" }}>
+    <div className="authsplit enter">
+    <div className="authart" role="img" aria-label="La troupe Clipr accueille les visiteurs à l'entrée du studio">
+      <p><b>{mode === "login" ? "Bon retour au studio" : "Bienvenue dans le studio"}</b>Fraise, Banane, Kiwi et Pêche t'attendent pour tourner ta prochaine vidéo.</p>
+    </div>
+    <form action={run} className="panel">
       <h1 style={{ fontSize: 28 }}>{mode === "login" ? "Connexion" : "Créer un compte"}</h1>
       {mode === "register" && (<><label>Nom</label><input name="name" autoComplete="name" /></>)}
       <label>Email</label><input name="email" type="email" required autoComplete="email" />
@@ -15,5 +19,6 @@ export default function AuthForm({ action, mode }: { action: (s: FormState, f: F
       <button className="btn accent" style={{ width: "100%", marginTop: 24 }} disabled={pending}>{pending ? "Un instant" : mode === "login" ? "Se connecter" : "Commencer gratuitement"}</button>
       <p className="xs muted" style={{ marginTop: 16, textAlign: "center" }}>{mode === "login" ? <>Pas encore de compte ? <Link href="/inscription" style={{ textDecoration: "underline" }}>Essai gratuit</Link></> : <>Déjà inscrit ? <Link href="/connexion" style={{ textDecoration: "underline" }}>Connexion</Link></>}</p>
     </form>
+    </div>
   );
 }
