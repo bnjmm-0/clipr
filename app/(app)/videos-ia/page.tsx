@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { getSettings } from "@/lib/settings";
+import { credentialStatus, getSettings } from "@/lib/settings";
 import Poller from "@/components/Poller";
 import DurationField from "@/components/DurationField";
 import StoryIdeaField from "@/components/StoryIdeaField";
@@ -43,6 +43,15 @@ export default async function AiVideos({ searchParams }: { searchParams: Promise
       ); })}</div></div>
   ) : <p className="xs muted" style={{ gridColumn: "1 / -1", marginTop: 12 }}>Crée tes personnages dans <Link href="/personnages" style={{ textDecoration: "underline" }}>Personnages</Link> : chacun reçoit une fiche de référence qui le garde identique d'une image à l'autre.</p>;
   const formatPick = <div><label>Format</label><select name="format" defaultValue={format === "narration" ? "narration" : "dialogue"}><option value="dialogue">Dialogue entre personnages</option><option value="narration">Narration (voix off)</option></select></div>;
+  // Synchro des lèvres (Kling Lip Sync sur Replicate) : enregistrée dans les options de la vidéo ou de la série.
+  const replicateKey = !!(await credentialStatus()).replicate;
+  const lipBox = (
+    <label className="check" style={{ marginTop: 12 }}>
+      <input type="checkbox" name="opt_lipSync" disabled={!replicateKey} />
+      <span className="small">Synchroniser les lèvres avec la voix <span className="xs muted" style={{ display: "block" }}>
+        {replicateKey ? "La bouche de chaque perso suit sa réplique (Kling Lip Sync, ≈ 0,014 $ la seconde, soit ≈ 0,40 $ pour 30 s). Marche le mieux en gros plan, un seul perso qui parle par scène." : "Ajoute d'abord la clé Replicate dans Réglages (≈ 0,014 $ la seconde)."}</span></span>
+    </label>
+  );
   const reviewBox = <label className="check" style={{ marginTop: 16 }}><input type="checkbox" name="review" defaultChecked /><span className="small">Valider le script et les images avant de créer la vidéo (recommandé : la voix et l'animation sont la partie la plus chère)</span></label>;
   return (
     <div className="page">
@@ -64,6 +73,7 @@ export default async function AiVideos({ searchParams }: { searchParams: Promise
               <EngineFields />
             </div>
             <StoryOptionsFields id="ep" open defaults={preOpts} />
+            {lipBox}
             {reviewBox}
             <input type="hidden" name="origin" value={source ? "manual" : idee ? "trend" : "manual"} />
             <button className="btn accent" style={{ marginTop: 20 }}>Générer la vidéo</button>
@@ -109,6 +119,7 @@ export default async function AiVideos({ searchParams }: { searchParams: Promise
                 <DurationField />
                 <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: "0 12px" }}>{castPick}{formatPick}<div><label>Sous-titres</label><select name="captionStyle">{STYLE_OPTS}</select></div><EngineFields /></div>
                 <StoryOptionsFields id="se" series />
+                {lipBox}
                 {reviewBox}
                 <label className="check" style={{ marginTop: 16 }}><input type="checkbox" name="startNow" defaultChecked /><span className="small">Générer l'épisode 1 tout de suite</span></label>
                 <button className="btn sm" style={{ marginTop: 16 }}>Créer la série</button>

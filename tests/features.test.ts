@@ -85,3 +85,12 @@ test("aide à l'idée : les recettes reprennent les personnages cochés", async 
   const none = fillRecipe(r, "series", []);
   assert.ok(/fraise|banane|kiwi/i.test(none) && !/\{[ABC]\}/.test(none));
 });
+
+test("synchro des lèvres : option enregistrée et affichée", async () => {
+  const { readStoryOptions, parseOptions, optionsSummary } = await import("../lib/story-options");
+  const fd = new FormData(); fd.set("opt_lipSync", "on");
+  const o = parseOptions(readStoryOptions(fd));
+  assert.equal(o.lipSync, "1");
+  assert.match(optionsSummary(o), /Lèvres synchronisées/);
+  assert.equal(parseOptions(readStoryOptions(new FormData())).lipSync, undefined);
+});

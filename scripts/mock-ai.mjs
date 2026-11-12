@@ -55,6 +55,13 @@ http.createServer(async (req, res) => {
   const buf = await body(req);
   const url = req.url.replace(/^\/v1/, "");
   if (url.startsWith("/files/")) { res.writeHead(200); return res.end(fs.readFileSync(path.join(dir, path.basename(url)))); }
+  // Replicate Files API : le fichier envoyé est gardé et servi à l'adresse renvoyée.
+  if (url === "/files" && req.method === "POST") {
+    const f = (await formData(req, buf)).get("content"), name = `up_${++n}_${f.name}`;
+    fs.writeFileSync(path.join(dir, name), Buffer.from(await f.arrayBuffer()));
+    log("  replicate fichier reçu", f.name, f.size, "octets");
+    return json(res, { id: name, urls: { get: `http://127.0.0.1:4010/v1/files/${name}` } }, 201);
+  }
   const who = req.headers["x-goog-api-key"] ? "google" : req.headers["x-api-key"] ? "anthropic" : req.headers["xi-api-key"] ? "elevenlabs" : url.startsWith("/models/") ? "replicate" : url.startsWith("/videos") ? "xai" : "openai";
   log(who, req.method, url);
   if (!(req.headers.authorization ?? req.headers["x-api-key"] ?? req.headers["xi-api-key"] ?? req.headers["x-goog-api-key"])) return json(res, { error: { message: "no key" } }, 401);

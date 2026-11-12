@@ -166,6 +166,31 @@ export async function replicateRun(model: string, input: Record<string, unknown>
   return out;
 }
 
+// Synchro des lèvres (Kling Lip Sync sur Replicate) : la bouche du personnage suit la voix de la scène.
+// Contraintes du modèle : vidéo de 2 à 10 s en 720-1920 px, audio de moins de 5 Mo. Payé à la seconde de vidéo.
+export const LIPSYNC_MODEL = "kwaivgi/kling-lip-sync";
+export const LIPSYNC_MIN = 2, LIPSYNC_MAX = 10;
+export async function lipSync(video: string, audio: string, outFile: string, userId: string, seconds: number) {
+  const s = await getSettings();
+  const url = await replicateRun(LIPSYNC_MODEL, { video_url: await replicateUpload(video), audio_file: await replicateUpload(audio) });
+  await download(url, outFile);
+  await recordUsage({ userId, provider: "replicate", kind: "video", model: LIPSYNC_MODEL, units: seconds, unitLabel: "secondes", costUsd: seconds * priceOf(`replicate:${LIPSYNC_MODEL}`, s.prices) });
+  return outFile;
+}
+
+// Envoie un fichier sur Replicate (Files API) et renvoie l'adresse à passer en entrée d'un modèle.
+export async function replicateUpload(file: string) {
+  const key = await requireCredential("replicate");
+  const fd = new FormData();
+  const type = file.endsWith(".mp4") ? "video/mp4" : file.endsWith(".mp3") ? "audio/mpeg" : file.endsWith(".wav") ? "audio/wav" : "application/octet-stream";
+  fd.append("content", new Blob([fs.readFileSync(file)], { type }), path.basename(file));
+  const r = await fetch(`${process.env.REPLICATE_BASE_URL ?? "https://api.replicate.com/v1"}/files`, { method: "POST", headers: { authorization: `Bearer ${key}` }, body: fd });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw apiError("Replicate", r.status, j);
+  if (!j.urls?.get) throw new Error("Replicate : envoi du fichier impossible");
+  return j.urls.get as string;
+}
+
 // Image envoyée en ligne (data URI) : convertie en JPEG de 1080 px de large au plus pour rester légère.
 function dataUri(file: string) {
   const jpg = execFileSync("ffmpeg", ["-v", "error", "-i", file, "-vf", "scale='min(1080,iw)':-2", "-q:v", "3", "-f", "image2pipe", "-vcodec", "mjpeg", "-"], { maxBuffer: 32 << 20 });

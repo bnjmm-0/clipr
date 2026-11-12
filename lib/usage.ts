@@ -25,6 +25,7 @@ export const DEFAULT_PRICES: Record<string, { price: number; per: string }> = {
   "openai:tts-1": { price: 0.015 * 1.5, per: "minute" },
   "replicate:image": { price: 0.03, per: "image" },
   "replicate:video": { price: 0.5, per: "vidéo" },
+  "replicate:kwaivgi/kling-lip-sync": { price: 0.014, per: "seconde" },
   // Google Gemini (tarifs publics AI Studio, novembre 2026)
   "google:gemini-3.8-flash:in": { price: 0.75, per: "1M tokens" },
   "google:gemini-3.8-flash:out": { price: 3.75, per: "1M tokens" },

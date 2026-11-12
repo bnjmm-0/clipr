@@ -67,7 +67,7 @@ export const STORY_FIELDS: StoryField[] = [
 ];
 
 const SECONDS: Record<string, number> = { rapide: 4, dynamique: 6, pose: 8 };
-export type StoryOptions = Record<string, string> & { episodeLabel?: string };
+export type StoryOptions = Record<string, string> & { episodeLabel?: string; lipSync?: string };
 
 // Lit les options d'un formulaire (valeurs vérifiées) ; null s'il n'y a rien de choisi.
 export function readStoryOptions(fd: FormData): string | null {
@@ -78,6 +78,7 @@ export function readStoryOptions(fd: FormData): string | null {
     if (f.kind === "select" ? f.choices.some((c) => c.v === v) : true) o[f.name] = f.kind === "text" ? v.slice(0, f.max) : v;
   }
   if (fd.get("opt_episodeLabel") === "on") o.episodeLabel = "1";
+  if (fd.get("opt_lipSync") === "on") o.lipSync = "1"; // synchro des lèvres (Kling Lip Sync)
   return Object.keys(o).length ? JSON.stringify(o) : null;
 }
 
@@ -106,9 +107,9 @@ export const styleOverride = (o: StoryOptions) => choice("style", o.style)?.hint
 
 // Résumé lisible (page de la vidéo).
 export function optionsSummary(o: StoryOptions) {
-  return STORY_FIELDS.map((f) => {
+  return [...STORY_FIELDS.map((f) => {
     const v = o[f.name];
     if (!v) return null;
     return `${f.label} : ${f.kind === "text" ? v : choice(f.name, v)?.label ?? v}`;
-  }).filter(Boolean).join(" · ");
+  }), o.lipSync === "1" ? "Lèvres synchronisées avec la voix" : null].filter(Boolean).join(" · ");
 }

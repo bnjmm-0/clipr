@@ -5,7 +5,7 @@ import { STORAGE_DIR } from "../storage";
 import { probe, run, splitAudio } from "./ffmpeg";
 import { chat, parseJsonLoose } from "../providers/llm";
 import { speak } from "../providers/tts";
-import { generateImage, generateVideo } from "../providers/media";
+import { LIPSYNC_MAX, LIPSYNC_MIN, generateImage, generateVideo, lipSync } from "../providers/media";
 import { transcribeFile, type Word } from "../providers/stt";
 import { renderClip } from "./render";
 import { makeCover } from "./cover";
@@ -179,6 +179,8 @@ export async function processEpisode(episodeId: string) {
   // 4. Voix (celle du personnage qui parle) et visuels, scène par scène
   const words: Word[] = [];
   const parts: string[] = [];
+  const lips = parseOptions(ep.optionsJson).lipSync === "1";
+  const lipErrors: string[] = [];
   let t = 0;
   for (let i = 0; i < n; i++) {
     const sc = script.scenes[i];
@@ -212,10 +214,28 @@ export async function processEpisode(episodeId: string) {
           "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", part]);
       }
     }
+    // Synchro des lèvres : la bouche du personnage suit sa voix (Kling Lip Sync, scènes de 2 à 10 s).
+    // La scène synchronisée est réencodée comme les autres pour que le montage puisse les recoller.
+    let shown = part;
+    if (lips) {
+      const lip = path.join(dir, `lip_${i}.mp4`), lipRaw = path.join(dir, `lipraw_${i}.mp4`);
+      if (!fs.existsSync(lip)) {
+        if (dur < LIPSYNC_MIN || dur > LIPSYNC_MAX) lipErrors.push(`scène ${i + 1} (${dur.toFixed(1)} s, il faut entre ${LIPSYNC_MIN} et ${LIPSYNC_MAX} s)`);
+        else {
+          await stage(ep.id, `synchro des lèvres ${i + 1}/${n}`, 45 + Math.round((40 * i) / n));
+          try {
+            if (!fs.existsSync(lipRaw)) await lipSync(part, voice, lipRaw, ep.userId, dur);
+            await run("ffmpeg", ["-y", "-v", "error", "-i", lipRaw, "-t", dur.toFixed(2), "-an",
+              "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30,setsar=1", "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", lip]);
+          } catch (e) { lipErrors.push(`scène ${i + 1} : ${(e as Error).message.slice(0, 160)}`); }
+        }
+      }
+      if (fs.existsSync(lip)) shown = lip;
+    }
     // Voix collée à la scène, toujours au même format audio (48 kHz stéréo) : les voix d'OpenAI, de Gemini et
     // d'ElevenLabs n'ont pas la même fréquence, et le montage recolle les scènes sans réencoder le son.
     const av = path.join(dir, `av_${i}.mp4`);
-    if (!fs.existsSync(av)) await run("ffmpeg", ["-y", "-v", "error", "-i", part, "-i", voice, "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac", "-b:a", "160k", "-ar", "48000", "-ac", "2", "-af", "apad", "-t", dur.toFixed(2), av]);
+    if (!fs.existsSync(av)) await run("ffmpeg", ["-y", "-v", "error", "-i", shown, "-i", voice, "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac", "-b:a", "160k", "-ar", "48000", "-ac", "2", "-af", "apad", "-t", dur.toFixed(2), av]);
     parts.push(av);
     t += dur;
   }
@@ -236,6 +256,8 @@ export async function processEpisode(episodeId: string) {
   await stage(ep.id, "miniature", 95);
   const cover = path.join(dir, "cover.jpg");
   await makeCover(joined, script.hook || ep.title, cover).catch((e) => console.error("miniature", e.message));
-  await prisma.episode.update({ where: { id: ep.id }, data: { status: "ready", stage: "terminé", progress: 100, filePath: out, thumbPath: thumb, coverPath: fs.existsSync(cover) ? cover : null, error: null } });
+  // La vidéo est prête même si la synchro des lèvres a échoué sur une scène : on l'indique sur sa page.
+  const note = lipErrors.length ? `Synchro des lèvres non faite pour : ${lipErrors.join(" · ")}. Ces scènes gardent l'animation d'origine.` : null;
+  await prisma.episode.update({ where: { id: ep.id }, data: { status: "ready", stage: "terminé", progress: 100, filePath: out, thumbPath: thumb, coverPath: fs.existsSync(cover) ? cover : null, error: note } });
   await scheduleAuto(ep.userId, { episodeId: ep.id });
 }
